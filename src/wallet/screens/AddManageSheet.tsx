@@ -12,8 +12,8 @@
  * tinted chip, 16/600 title over a 12pt subtitle, chevron at the right.
  *
  * Both rows are whole-sheet swaps rather than stacked modals — "Add tokens"
- * lands on the market list, "Organize tokens" on the Manage tokens sheet the
- * toggles live in.
+ * lands on the token picker in receive mode, "Organize tokens" on the Manage
+ * tokens sheet the toggles live in.
  */
 
 import { Sheet } from '../components/Shell'
@@ -34,11 +34,13 @@ export function AddManageSheet({ onClose }: AddManageSheetProps) {
       <style>{CSS}</style>
 
       <div className="am-list">
-        {/* The market list is what the coach mark and the dock search both
-         * reach for too — three doors into the same screen, as in the app. */}
+        {/* The token picker is what Home's Add funds, the promo card and the
+         * dock search all reach for too — several doors into the same screen,
+         * as in the app. Like them, it opens in receive mode: this build
+         * receives, buying is out of scope. */}
         <button
           className="am-row"
-          onClick={() => w.openSheet({ kind: 'chooseToken', purpose: 'buy' })}
+          onClick={() => w.openSheet({ kind: 'chooseToken', purpose: 'receive' })}
         >
           <span className="am-chip">
             <Plus size={22} />

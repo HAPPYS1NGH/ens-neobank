@@ -87,7 +87,7 @@ export function AddressBook() {
 
       <header className="ab-head">
         <button className="ab-back" onClick={w.back} aria-label="Back">
-          <ChevronDown size={22} style={{ transform: 'rotate(-90deg)' }} />
+          <ChevronDown size={22} style={{ transform: 'rotate(90deg)' }} />
         </button>
         <h1 className="ab-title">Address book</h1>
       </header>
@@ -360,7 +360,7 @@ export function AddContact() {
 
       <header className="ac-head">
         <button className="ac-back" onClick={w.back} aria-label="Back">
-          <ChevronDown size={22} style={{ transform: 'rotate(-90deg)' }} />
+          <ChevronDown size={22} style={{ transform: 'rotate(90deg)' }} />
         </button>
         <h1 className="ac-title">Add contact</h1>
       </header>

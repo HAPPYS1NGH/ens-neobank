@@ -6,13 +6,15 @@
  * Faithful to the shot in what it shows and in what it does not: there is no
  * row of action circles under the balance. Sampling the scrimmed pixels, the
  * gap between "ETH 0.00" and the Quick top up card is ~50pt, which cannot hold
- * a 46pt circle and its label. So the two ways out of this screen are rows in
- * the same shape as the "Buy" row the shot does show — leading tinted circle,
- * title, subtitle, chevron. That row shape is also exactly what the Transfer
- * sheet uses (IMG_4298), so nothing new is invented here.
+ * a 46pt circle and its label. The shot's "Buy" row is deliberately dropped —
+ * buying is out of scope for this build — so the ways out of this screen are
+ * the Receive and Transfer rows, in the same shape as the Buy row the shot
+ * does show: leading tinted circle, title, subtitle, chevron. That row shape
+ * is also exactly what the Transfer sheet uses (IMG_4298), so nothing new is
+ * invented here.
  *
  * Everything monetary on this screen is simulated (src/lib/assets.ts). The
- * Quick top up chips and Buy row are decoration and say so when tapped.
+ * Quick top up chips are decoration and say so when tapped.
  */
 
 import type { ReactNode } from 'react'
@@ -21,7 +23,7 @@ import { assetForNetwork } from '@/lib/assets'
 import { splitUsd, tokenAmount } from '@/lib/format'
 import { useWallet } from '../store'
 import { NetworkMark } from '../components/CoinMark'
-import { Back, Bolt, ChevronRight, CreditCard, Ellipsis, ArrowDown, Swap } from '../components/Icons'
+import { Back, Bolt, ChevronRight, Ellipsis, ArrowDown, Swap } from '../components/Icons'
 
 export interface TokenDetailProps {
   /** A network id from src/lib/chains.ts, e.g. `eth-main`. */
@@ -94,17 +96,9 @@ export function TokenDetail({ networkId }: TokenDetailProps) {
           </div>
         </section>
 
-        <div className="card">
-          <ActionRow
-            icon={<CreditCard size={20} />}
-            title="Buy"
-            sub="Get crypto by card, bank transfer & more"
-            onClick={() => showToast('Buying is not part of this demo')}
-          />
-        </div>
-
-        {/* The two rows the demo actually needs. Same shape as Buy above and as
-            the Transfer sheet's rows, because they are the same control. */}
+        {/* The two rows the demo actually needs. Same shape as the Buy row in
+            IMG_4299 and as the Transfer sheet's rows, because they are the
+            same control — buying itself is out of scope for this build. */}
         <div className="card">
           <ActionRow
             icon={<ArrowDown size={20} />}

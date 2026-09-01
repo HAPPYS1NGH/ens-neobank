@@ -62,7 +62,9 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
 
   const scan = onScan ?? notInDemo('Scanning')
   const swap = onSwap ?? notInDemo('Swap')
-  const search = onSearch ?? (() => w.openSheet({ kind: 'chooseToken', purpose: 'buy' }))
+  // Add funds, the promo card and the dock search all land in the same token
+  // picker in receive mode — this build receives; buying is out of scope.
+  const search = onSearch ?? (() => w.openSheet({ kind: 'chooseToken', purpose: 'receive' }))
 
   // The Transfer sheet is per-asset; with nothing in the list there is no asset
   // to open it for, so the tap says so instead of dead-ending.
@@ -144,7 +146,7 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
               <div>
                 <div className="hm-promo__title">Get your first crypto</div>
                 <div className="hm-promo__sub">
-                  Buy or receive crypto to start using your wallet.
+                  Receive crypto to start using your wallet.
                 </div>
               </div>
               {/* Two overlapping coin marks, as in the shot's top-right corner. */}
@@ -212,7 +214,7 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
               <div className="hm-coach__main">
                 <div className="hm-coach__title">Add tokens</div>
                 <p className="hm-coach__body">
-                  Pull this up or tap the search bar to add tokens directly from the market
+                  Pull this up or tap the search bar to receive crypto at your name
                 </p>
               </div>
               <button

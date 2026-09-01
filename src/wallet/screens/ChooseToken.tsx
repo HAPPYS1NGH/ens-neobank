@@ -3,11 +3,11 @@
 /**
  * Choose token — IMG_4297.
  *
- * The token picker the Buy / Send / Receive flows share. The reference shot is
- * the Buy flow, which is why it opens with the Regional Restriction card; the
- * notice is about buying and selling availability, so it only renders for
- * `purpose: 'buy'` — the Receive and Send entries into this sheet have no
- * regional story and a sell restriction under them would read as a bug.
+ * The token picker the Receive and Send flows share. The reference shot is the
+ * Buy flow, and this build keeps that mode (with its Regional Restriction card)
+ * for when buying lands — but nothing routes to it today: every entry point
+ * opens this sheet in receive mode, and a sell restriction under a Receive or
+ * Send flow would read as a bug.
  *
  * Rows are coin-level, not network-level: the home list splits Ethereum and
  * Base into separate rows, but this picker names coins (Bitcoin, Ethereum)
@@ -49,7 +49,9 @@ interface PortfolioCoin {
 export function ChooseToken({ purpose, onClose }: ChooseTokenProps) {
   const w = useWallet()
   const close = onClose ?? w.closeSheet
-  const mode = purpose ?? (w.sheet.kind === 'chooseToken' ? w.sheet.purpose : 'buy')
+  // Nothing opens this sheet in buy mode any more, so a stray render falls
+  // back to receive rather than to the buy fiction.
+  const mode = purpose ?? (w.sheet.kind === 'chooseToken' ? w.sheet.purpose : 'receive')
   const [query, setQuery] = useState('')
 
   /**

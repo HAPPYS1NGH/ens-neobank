@@ -126,6 +126,8 @@ export type Sheet =
   | { kind: 'chooseToken'; purpose: 'buy' | 'receive' | 'send' }
   | { kind: 'transfer'; networkId: string }
   | { kind: 'receive'; networkId: string }
+  /** Add a chain from the Receive sheet, then land back on Receive for it. */
+  | { kind: 'addNetwork' }
   | { kind: 'addWallet' }
 
 /* --------------------------------- state --------------------------------- */

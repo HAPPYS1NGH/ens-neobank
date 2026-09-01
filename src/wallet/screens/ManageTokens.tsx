@@ -15,7 +15,9 @@
  *
  *  - Unwritable networks (XRP, TRON, the L2s the registry has no entry for)
  *    stay in the list with their `reason` rendered under the row. Hiding them
- *    would misrepresent what the integration covers.
+ *    would misrepresent what the integration covers. Their toggles render
+ *    disabled and dimmed, so a switch that cannot be flipped never looks like
+ *    one that is merely off.
  *  - Toggling a network OFF does not delete its record — `saveNetworks` in the
  *    store only ever adds. When a row with a live record is switched off, the
  *    caption under it says the record stays on the name, rather than letting
@@ -542,12 +544,13 @@ const CSS = `
   color: var(--price-down);
 }
 
-/* The in-flight record write. Small and grey — it sits where the toggle was. */
+/* The in-flight record write. Small and grey — it takes the toggle's whole
+ * 50px box (18px spinner + margin) so the row's other contents never shift. */
 .mt-spin {
   flex: none;
   width: 18px;
   height: 18px;
-  margin-right: 16px;
+  margin-right: 32px;
   border-radius: 50%;
   border: 2px solid var(--divider);
   border-top-color: var(--text-3);

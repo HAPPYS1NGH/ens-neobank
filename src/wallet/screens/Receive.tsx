@@ -18,24 +18,29 @@
  *  - The network is not EVM. A Bitcoin or Solana wallet does not resolve ENS,
  *    so the QR carries the address and says so, rather than shipping a QR that
  *    scans into a string the other wallet cannot use.
+ *
+ * And one affordance the real sheet never needs: a way to add a chain. The
+ * sheet displays whatever network opened it, so if a writable network is still
+ * switched off, an "Add network" line hands over to the Add network sheet —
+ * which writes the record and lands back here on the new chain.
  */
 
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
-import { CHAIN_BY_KEY, NETWORK_BY_ID } from '@/lib/chains'
+import { CHAIN_BY_KEY, NETWORKS, NETWORK_BY_ID } from '@/lib/chains'
 import { assetForNetwork } from '@/lib/assets'
 import { fullAddress } from '@/lib/format'
 import { useWallet } from '../store'
 import { Sheet } from '../components/Shell'
 import { NetworkMark } from '../components/CoinMark'
-import { ChevronDown, ChevronUp, Copy, Info, QrCode, Share } from '../components/Icons'
+import { ChevronDown, ChevronUp, Copy, Info, Plus, QrCode, Share } from '../components/Icons'
 
 export interface ReceiveProps {
   networkId: string
 }
 
 export function Receive({ networkId }: ReceiveProps) {
-  const { closeSheet, addressForNetwork, ensName, showToast } = useWallet()
+  const { closeSheet, addressForNetwork, ensName, showToast, openSheet, enabled } = useWallet()
   const [showAddress, setShowAddress] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [qr, setQr] = useState('')
@@ -45,6 +50,10 @@ export function Receive({ networkId }: ReceiveProps) {
   const address = addressForNetwork(networkId)
   const chain = network?.chain
   const spec = chain ? CHAIN_BY_KEY[chain] : undefined
+
+  // A writable network that is not on yet. If one exists, the sheet offers the
+  // Add network flow instead of leaving the user stuck on the chains they have.
+  const canAddNetwork = NETWORKS.some((n) => n.writable && !enabled.has(n.id))
 
   // The name only stands in for this network once its address record is
   // actually written. Reading it back from the name rather than assuming it is
@@ -182,6 +191,13 @@ export function Receive({ networkId }: ReceiveProps) {
           </button>
         </div>
 
+        {canAddNetwork && (
+          <button className="rc__add" onClick={() => openSheet({ kind: 'addNetwork' })}>
+            <Plus size={16} />
+            Add network
+          </button>
+        )}
+
         <div className="rc__warning">
           <div className="rc__warning-text">
             <p className="rc__warning-title">
@@ -289,6 +305,20 @@ const CSS = `
 }
 
 .rc__pill:active { opacity: .7; }
+
+/* The way out of a one-chain sheet: same voice as the disclose toggle above,
+ * a quiet accent line rather than a second pill competing with Copy/Share. */
+.rc__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--accent);
+}
+
+.rc__add:active { opacity: .7; }
 
 .rc__warning {
   display: flex;

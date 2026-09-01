@@ -93,9 +93,11 @@ npm run check:secrets  # fails if the API key or server SDK reached the client b
 npm run cleanup        # lists demo-created names; --apply deletes them
 ```
 
-`npm run shots` is declared in `package.json` but `shots/capture.mjs` is not in the repo —
-the screenshot walker from the D'CENT build was never ported. Treat it as a gap, not a
-feature.
+`npm run shots` walks the whole app headless (Playwright, viewport 440×956 @3x to match the
+reference PNGs) and drops 21 captures into `shots/` — onboarding through wallet detail,
+including a live claim. Each run mints a fresh `tangemdemo<4 digits>` name, so clean it up
+afterwards with `npm run cleanup -- --apply <label>` if you do not want it. Requires the dev
+server on port 3008 (`npm run dev -- -p 3008`) and `npx playwright install chromium` once.
 
 `cleanup` is a dry run unless you name labels explicitly. Every name this app creates is
 tagged `{ demo: 'tangem-ios' }` server-side, and that tag also matches names real people

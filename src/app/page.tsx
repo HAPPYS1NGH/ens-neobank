@@ -38,6 +38,7 @@ import { ChooseAccount } from '@/wallet/screens/ChooseAccount'
 import { ChooseToken } from '@/wallet/screens/ChooseToken'
 import { TransferSheet } from '@/wallet/screens/TransferSheet'
 import { Receive } from '@/wallet/screens/Receive'
+import { AddNetworkSheet } from '@/wallet/screens/AddNetworkSheet'
 import { AddWalletSheet } from '@/wallet/screens/AddWalletSheet'
 
 /* ------------------------------------------------------------------ screens */
@@ -104,6 +105,8 @@ function SheetRouter() {
       return <TransferSheet networkId={sheet.networkId} />
     case 'receive':
       return <Receive networkId={sheet.networkId} />
+    case 'addNetwork':
+      return <AddNetworkSheet />
     case 'addWallet':
       return <AddWalletSheet />
     default:

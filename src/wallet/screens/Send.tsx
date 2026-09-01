@@ -20,7 +20,7 @@
  *   0x...                -> used as typed. Nothing is looked up.
  *
  * The resolution is deliberately visible: the pending line, the resolved
- * address, the coin type that answered and which system answered it. A wallet
+ * address and which system answered it (badged, with a source line). A wallet
  * that resolves names invisibly teaches nobody anything, and this screen exists
  * to be read as much as used.
  *
@@ -304,8 +304,8 @@ function ResolutionBlock({
       <p className="mono sn__hit-address">{resolution.address}</p>
       <p className="sn__hit-source">
         {internal
-          ? `Read from the ${parent} registry · coin type ${resolution.coinType}`
-          : `Public ENS via CCIP-Read · coin type ${resolution.coinType}`}
+          ? `Read from the ${parent} registry`
+          : 'Public ENS via CCIP-Read'}
       </p>
     </div>
   )

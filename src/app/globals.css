@@ -473,6 +473,10 @@ svg {
 }
 
 .toggle__knob {
+  /* The knob is a bare <span>, and a span defaults to inline — an inline box
+   * ignores width, height AND transform, so without this the knob renders at
+   * zero size and the switch reads as a track that only changes colour. */
+  display: block;
   width: 18px;
   height: 18px;
   border-radius: var(--r-icon);
@@ -483,6 +487,14 @@ svg {
 
 .toggle[data-on="true"] .toggle__knob {
   transform: translateX(28px);
+}
+
+/* A disabled switch must not look like an off one. Unwritable networks and the
+ * saving freeze both land here; dimming the whole control (track and knob
+ * together) is what makes "this one cannot be flipped" legible. */
+.toggle:disabled {
+  cursor: default;
+  opacity: 0.4;
 }
 
 /* Home-specific ------------------------------------------------------------ */
