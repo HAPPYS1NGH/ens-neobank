@@ -21,7 +21,13 @@
  * white `plain` background the Receive sheet uses (IMG_4299).
  */
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { Close } from './Icons'
 
 /** The screen, in points. Everything else is measured against these. */
@@ -116,12 +122,22 @@ export function HomeIndicator() {
 
 /* ------------------------------------------------------------------ frame */
 
+/** `useLayoutEffect` on the client, a no-op effect during SSR (which warns). */
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
 /**
  * The frame. On a phone it is the whole viewport; on a desktop it is an
  * iPhone-shaped card in the middle of a black stage, scaled down continuously
  * so the whole device — 956pt plus the bezel — always fits the window. The
  * media-query steps in the CSS are only the pre-hydration fallback; once the
  * effect runs, the inline transform takes over and tracks resizes exactly.
+ *
+ * Centring is done by the transform (`translate(-50%, -50%)` off the stage's
+ * midpoint), not by the stage's alignment. The frame's *layout* box is always
+ * the full 464 x 980 — `scale()` shrinks what you see, not what the box
+ * measures — so a flex/grid `center` would clamp that oversized box to the top
+ * of a short window and then scale it about the wrong point, which is what
+ * left a gap above the phone and cut the bezel off below.
  *
  * Children render inside a `position: relative` screen, so every screen and
  * sheet can position itself absolutely against the device rather than the page.
@@ -142,7 +158,9 @@ export function Shell({
   // null → no inline transform yet; the CSS media-query steps apply instead.
   const [fit, setFit] = useState<number | null>(null)
 
-  useEffect(() => {
+  // Layout effect so the measured scale lands in the same paint as hydration;
+  // a plain effect would show the coarse media-query step for a frame first.
+  useIsomorphicLayoutEffect(() => {
     const update = () => {
       // On a phone the frame fills the viewport unscaled — CSS owns it there.
       if (window.innerWidth <= 520) {
@@ -164,7 +182,12 @@ export function Shell({
   return (
     <div className="tg-stage">
       <style>{SHELL_CSS}</style>
-      <div className="tg-frame" style={fit !== null ? { transform: `scale(${fit})` } : undefined}>
+      <div
+        className="tg-frame"
+        style={
+          fit !== null ? { transform: `translate(-50%, -50%) scale(${fit})` } : undefined
+        }
+      >
         <div className="tg-screen">
           {children}
           {showStatusBar && <StatusBar time={statusTime} tint={statusTint} />}
@@ -235,18 +258,20 @@ const SHELL_CSS = `
 .tg-stage {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
   background: #0a0a0b;
   overflow: hidden;
 }
 
 .tg-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   padding: 12px;
   border-radius: 68px;
   background: #050505;
   box-shadow: 0 0 0 2px #2a2a2e, 0 30px 80px rgba(0, 0, 0, .55);
   transform-origin: center;
+  transform: translate(-50%, -50%);
 }
 
 .tg-screen {
@@ -263,17 +288,18 @@ const SHELL_CSS = `
 /* Short windows: pre-hydration fallback only. The Shell effect scales the
    frame continuously once JS is live, so the screen is never cropped and the
    layout a screen agent measured against 440x956 never changes. */
-@media (max-height: 1000px) { .tg-frame { transform: scale(.94); } }
-@media (max-height: 940px)  { .tg-frame { transform: scale(.88); } }
-@media (max-height: 880px)  { .tg-frame { transform: scale(.82); } }
-@media (max-height: 820px)  { .tg-frame { transform: scale(.76); } }
-@media (max-height: 760px)  { .tg-frame { transform: scale(.70); } }
-@media (max-height: 700px)  { .tg-frame { transform: scale(.64); } }
+@media (max-height: 1000px) { .tg-frame { transform: translate(-50%, -50%) scale(.94); } }
+@media (max-height: 940px)  { .tg-frame { transform: translate(-50%, -50%) scale(.88); } }
+@media (max-height: 880px)  { .tg-frame { transform: translate(-50%, -50%) scale(.82); } }
+@media (max-height: 820px)  { .tg-frame { transform: translate(-50%, -50%) scale(.76); } }
+@media (max-height: 760px)  { .tg-frame { transform: translate(-50%, -50%) scale(.70); } }
+@media (max-height: 700px)  { .tg-frame { transform: translate(-50%, -50%) scale(.64); } }
 
 /* On a phone the app is the phone: no bezel, no scaling, fill the viewport. */
 @media (max-width: 520px) {
   .tg-stage { background: var(--bg-page); }
   .tg-frame {
+    position: static;
     padding: 0;
     border-radius: 0;
     background: none;
