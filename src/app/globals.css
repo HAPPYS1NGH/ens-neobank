@@ -1,0 +1,574 @@
+/* Tangem iOS 6.2 — design tokens sampled from reference/screens/*.PNG.
+ *
+ * Every value here came out of a pixel, not a memory. The audit trail — source
+ * image and coordinate for each one — is in docs/DESIGN.md. If you need a colour
+ * that is not here, sample it and add it here; do not inline a hex in a screen.
+ *
+ * Scale: the shots are 1320 x 2868 (iPhone 17 Pro Max, @3x), so the app's own
+ * coordinate space is 440 x 956 points. We render 1 CSS px = 1 iOS point, which
+ * makes every measurement in DESIGN.md a px value you can use directly.
+ *
+ * Light theme only. Tangem's Details screens (IMG_4307/4308) were shot at night
+ * with iOS auto-dark on; they are recoloured here, not carried over. There are
+ * deliberately no `prefers-color-scheme: dark` blocks — a dark override would
+ * fight the one theme the rest of the build assumes.
+ */
+
+:root {
+  /* ---------------------------------------------------------------- surfaces */
+  --bg-page: #f4f4f4; /* everything that is not a card, once the wash fades out */
+  --bg-card: #ffffff; /* token rows, list groups, the Receive sheet */
+  --bg-sheet: #f4f4f4; /* Manage tokens / Choose token / Add & Manage / Transfer */
+  --bg-sheet-plain: #ffffff; /* the Receive assets sheet, which is white end to end */
+  --bg-field: #dedede; /* search inputs inside a sheet */
+  --bg-field-plain: #fcfcfc; /* the floating search bar that sits over the page */
+  --bg-subtle: #ebebeb; /* secondary button, feature-icon circles */
+  --bg-subtle-2: #f3f3f3; /* Copy / Share pills on a white sheet */
+  --bg-dock: #e8e8e8; /* the "Crypto, news and more" pill, the Add & Manage pill */
+  --bg-notice: #eaeaea; /* the wrong-network strip under an address */
+  --bg-elevated: #fdfdfd; /* circular back / close buttons, which carry a shadow */
+
+  /* -------------------------------------------------------------------- ink */
+  --text-1: #1e1e1e; /* titles, row names, amounts */
+  --text-2: #656565; /* the explanatory line under a row title */
+  --text-3: #919191; /* tickers, placeholders, addresses, the terms line */
+  --icon-ink: #0f0f0f; /* glyphs run a shade darker than text */
+  --text-on-dark: #ffffff;
+
+  /* Header text sits on the lavender wash and is drawn with a translucent black,
+   * so it picks up the tint underneath. These are the composited values. */
+  --text-wash-1: #2c2d32; /* the balance */
+  --text-wash-2: #6b6c78; /* the wallet name under it */
+
+  /* ------------------------------------------------------------------ accent */
+  --accent: #4396f7; /* + icons, MAIN / MAIN L2 tags, links, price-up */
+  --accent-soft: #e8f4fe; /* the tinted circle behind an accent glyph */
+  --accent-ink: #ffffff;
+
+  /* ------------------------------------------------------- market + feedback */
+  /* Tangem draws gains in the accent blue, not green. Do not "fix" this. */
+  --price-up: #4396f7;
+  --price-down: #eb483f;
+  --warning: #f4ba46; /* the regional-restriction triangle */
+  --danger: #ff3333; /* the badge on an unbacked-up wallet */
+
+  /* ----------------------------------------------------------- lines + fills */
+  --divider: #ebebeb; /* hairline between rows in one card */
+  --divider-w: 0.5px; /* the device draws 1/3 pt; 0.5 is the closest we get */
+  --track-off: #c5c5c7;
+  --track-on: #1e1e1e;
+  --knob: #ffffff;
+
+  /* -------------------------------------------------------------- coin marks */
+  --coin-btc: #e9973c;
+  --coin-eth-light: #8b91af;
+  --coin-eth-mid: #63688c;
+  --coin-eth-dark: #464972;
+  --coin-base: #204ff4;
+  --coin-sol-from: #8251ed;
+  --coin-sol-to: #70e9af;
+  --coin-usdt: #009393;
+  --coin-bnb: #f0b90b;
+  --coin-tron: #eb0029;
+  --coin-doge: #c3a634;
+  --coin-zec: #ecb244;
+  /* Manage tokens greys a coin's mark until it is in the portfolio. */
+  --coin-off-1: #747474;
+  --coin-off-2: #b8b8b8;
+  --coin-off-3: #4b4b4b;
+  --coin-off-4: #3c3c3c;
+
+  /* ------------------------------------------------------------------- scrim */
+  /* Solid black at 0.71 reproduces every sampled pair on IMG_4301/4305. */
+  --scrim: rgba(0, 0, 0, 0.71);
+
+  /* --------------------------------------------------------------- the wash */
+  /* The lavender bloom behind the Home balance. Centre sits at 43% across and
+   * 13px down — effectively on the top edge — and the ellipse is 2.17x taller
+   * than it is wide, which is why it is still visible level with the promo card
+   * but gone before the screen's left and right edges. */
+  --wash-core: #b5bae7;
+  --wash-edge: #f4f4f4;
+  --wash: radial-gradient(
+    ellipse 280px 609px at 43% 13px,
+    #b5bae7 0%,
+    #b7bce8 12%,
+    #c1c5eb 24%,
+    #cecfec 37%,
+    #dbdaef 49%,
+    #e6e4f2 61%,
+    #ecebf2 73%,
+    #f1eff4 85%,
+    #f4f4f4 100%
+  );
+  /* The promo card's own left-to-right wash: cool lavender into a warm sage. */
+  --promo-wash: linear-gradient(100deg, #e1dee7 0%, #eaebec 55%, #e6ecdf 100%);
+
+  /* ------------------------------------------------------------------ radii */
+  --r-sheet: 32px; /* the inset modal sheets */
+  --r-card: 24px; /* token cards, list groups, the promo card */
+  --r-field: 22px; /* search inputs (they are pills at 44px tall) */
+  --r-button: 999px; /* primary / secondary buttons are true pills */
+  --r-pill: 999px;
+  --r-toggle: 11px;
+  --r-icon: 999px; /* every coin mark and icon chip is a circle */
+
+  /* --------------------------------------------------------------- geometry */
+  --pad-page: 12px; /* Home: cards run 36..1283 of 1320 device px */
+  --pad-onboard: 16px; /* Onboarding buttons sit 16px in */
+  --pad-sheet: 8px; /* the sheet itself is inset 8px from the screen */
+  --pad-sheet-card: 16px; /* sheet edge -> card edge */
+  --pad-row: 16px; /* card edge -> content */
+
+  --h-row: 63px; /* Home token row pitch */
+  --h-row-sheet: 68px; /* Manage tokens coin row pitch */
+  --h-row-network: 60px; /* the indented per-network rows */
+  --h-button: 46px;
+  --h-field: 44px;
+  --h-pill: 31px; /* the Add & Manage pill */
+  --h-dock: 44px;
+
+  --sz-coin: 39px; /* coin mark on Home */
+  --sz-coin-sheet: 35px; /* coin mark in a sheet list */
+  --sz-coin-network: 22px; /* the small mark on an indented network row */
+  --sz-action: 46px; /* Add funds / Swap / Transfer circles */
+  --sz-icon-chip: 40px; /* the grey circle behind a feature icon */
+  --sz-glyph: 20px;
+
+  --gap-group: 12px; /* between two card groups */
+  --gap-row: 8px; /* between stacked buttons */
+
+  /* ------------------------------------------------------------------- type */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --fs-display: 40px; /* the asset balance on a token screen */
+  --fs-balance: 34px; /* Home balance, integer part */
+  --fs-balance-frac: 22px; /* Home balance, ".00" — same colour, smaller */
+  --fs-title: 26px; /* screen title */
+  --fs-heading: 20px; /* section heading */
+  --fs-sheet-title: 15px;
+  --fs-body: 15px; /* token names, amounts */
+  --fs-label: 14px; /* row titles, button labels */
+  --fs-sub: 12px; /* subtitles, tickers, captions, tags */
+  --fs-mono: 12px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --lh-tight: 1.15;
+  --lh-body: 1.35;
+
+  /* ---------------------------------------------------------------- shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* ------------------------------------------------------------------ base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text-1);
+  background: #000;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* iOS text never scales with the browser's own zoom in these shots. */
+  -webkit-text-size-adjust: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea {
+  border: 0;
+  outline: 0;
+  background: none;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Native-feeling scroll: momentum, no bars, no rubber-band on the page itself. */
+.scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* --------------------------------------------------------------- primitives */
+
+.page-pad {
+  padding-left: var(--pad-page);
+  padding-right: var(--pad-page);
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.card + .card {
+  margin-top: var(--gap-group);
+}
+
+.sheet {
+  background: var(--bg-sheet);
+  border-radius: var(--r-sheet);
+  margin: 0 var(--pad-sheet);
+  box-shadow: var(--shadow-sheet);
+}
+
+.sheet--plain {
+  background: var(--bg-sheet-plain);
+}
+
+.sheet-title {
+  font-size: var(--fs-sheet-title);
+  font-weight: var(--fw-semibold);
+  text-align: center;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+}
+
+/* A row is the unit everything in this app is built from: leading mark, a title
+ * stack, an optional trailing value. Height is set per context, not here. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--h-row);
+  padding: 0 var(--pad-row);
+  background: var(--bg-card);
+}
+
+.row + .row {
+  box-shadow: inset 0 var(--divider-w) 0 var(--divider);
+}
+
+.row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.row__title {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: var(--text-1);
+}
+
+.row__sub {
+  font-size: var(--fs-sub);
+  color: var(--text-3);
+}
+
+.row__value {
+  text-align: right;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+}
+
+/* Coin marks. Always circular, always one of three sizes. */
+.mark {
+  width: var(--sz-coin);
+  height: var(--sz-coin);
+  border-radius: var(--r-icon);
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.mark--sheet {
+  width: var(--sz-coin-sheet);
+  height: var(--sz-coin-sheet);
+}
+.mark--network {
+  width: var(--sz-coin-network);
+  height: var(--sz-coin-network);
+}
+
+/* Buttons ------------------------------------------------------------------ */
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: var(--h-button);
+  border-radius: var(--r-button);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  transition: opacity 0.15s ease;
+}
+
+.btn:active {
+  opacity: 0.7;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.btn--primary {
+  background: var(--text-1);
+  color: var(--text-on-dark);
+}
+
+.btn--secondary {
+  background: var(--bg-subtle);
+  color: var(--text-1);
+}
+
+.btn--tinted {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The rounded chip buttons: Add & Manage, Copy, Share, Quick top up amounts. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--h-pill);
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: var(--bg-dock);
+  color: var(--text-1);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+}
+
+.pill--light {
+  background: var(--bg-subtle-2);
+}
+
+.pill--tag {
+  height: auto;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-sub);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+}
+
+/* The circular icon buttons: back, close, Add funds / Swap / Transfer. */
+.circle-btn {
+  width: var(--sz-action);
+  height: var(--sz-action);
+  border-radius: var(--r-icon);
+  background: var(--bg-elevated);
+  color: var(--icon-ink);
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-float);
+  flex: none;
+}
+
+/* Fields ------------------------------------------------------------------- */
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--h-field);
+  padding: 0 14px;
+  border-radius: var(--r-field);
+  background: var(--bg-field);
+  color: var(--text-1);
+  font-size: var(--fs-body);
+}
+
+.field--plain {
+  background: var(--bg-field-plain);
+  box-shadow: var(--shadow-float);
+}
+
+.field input::placeholder {
+  color: var(--text-3);
+}
+
+/* Toggle ------------------------------------------------------------------- */
+/* Tangem's switch is wider and flatter than the iOS default: 50 x 22, not
+ * 51 x 31. Measured off the SOLANA MAIN row in IMG_4305. */
+
+.toggle {
+  width: 50px;
+  height: 22px;
+  border-radius: var(--r-toggle);
+  background: var(--track-off);
+  padding: 2px;
+  flex: none;
+  transition: background 0.2s ease;
+}
+
+.toggle[data-on="true"] {
+  background: var(--track-on);
+}
+
+.toggle__knob {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-icon);
+  background: var(--knob);
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.toggle[data-on="true"] .toggle__knob {
+  transform: translateX(28px);
+}
+
+/* Home-specific ------------------------------------------------------------ */
+
+.wash {
+  background: var(--wash);
+}
+
+.balance {
+  font-size: var(--fs-balance);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  color: var(--text-wash-1);
+  letter-spacing: -0.01em;
+}
+
+/* The cents are the same colour as the dollars — only the size changes. They
+ * read lighter because of it, which is the whole trick. */
+.balance__frac {
+  font-size: var(--fs-balance-frac);
+}
+
+.wallet-name {
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--text-wash-2);
+}
+
+.grabber {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-3);
+  opacity: 0.5;
+  margin: 0 auto;
+}
+
+/* Market movement ---------------------------------------------------------- */
+
+.delta {
+  font-size: var(--fs-sub);
+  font-weight: var(--fw-medium);
+}
+.delta[data-dir="up"] {
+  color: var(--price-up);
+}
+.delta[data-dir="down"] {
+  color: var(--price-down);
+}
+
+/* Typography helpers ------------------------------------------------------- */
+
+.title {
+  font-size: var(--fs-title);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.01em;
+}
+
+.heading {
+  font-size: var(--fs-heading);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  font-size: var(--fs-sub);
+  color: var(--text-2);
+}
+
+.muted {
+  color: var(--text-3);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  color: var(--text-3);
+  word-break: break-all;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
