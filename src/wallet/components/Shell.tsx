@@ -21,7 +21,7 @@
  * white `plain` background the Receive sheet uses (IMG_4299).
  */
 
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Close } from './Icons'
 
 /** The screen, in points. Everything else is measured against these. */
@@ -118,8 +118,10 @@ export function HomeIndicator() {
 
 /**
  * The frame. On a phone it is the whole viewport; on a desktop it is an
- * iPhone-shaped card in the middle of a black stage, scaled down in steps once
- * the window is too short to hold 956pt plus the bezel.
+ * iPhone-shaped card in the middle of a black stage, scaled down continuously
+ * so the whole device — 956pt plus the bezel — always fits the window. The
+ * media-query steps in the CSS are only the pre-hydration fallback; once the
+ * effect runs, the inline transform takes over and tracks resizes exactly.
  *
  * Children render inside a `position: relative` screen, so every screen and
  * sheet can position itself absolutely against the device rather than the page.
@@ -137,10 +139,32 @@ export function Shell({
   showStatusBar?: boolean
   showHomeIndicator?: boolean
 }) {
+  // null → no inline transform yet; the CSS media-query steps apply instead.
+  const [fit, setFit] = useState<number | null>(null)
+
+  useEffect(() => {
+    const update = () => {
+      // On a phone the frame fills the viewport unscaled — CSS owns it there.
+      if (window.innerWidth <= 520) {
+        setFit(null)
+        return
+      }
+      const scale = Math.min(
+        1,
+        (window.innerHeight - 28) / (SCREEN_HEIGHT + 24),
+        (window.innerWidth - 28) / (SCREEN_WIDTH + 24),
+      )
+      setFit(scale)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
   return (
     <div className="tg-stage">
       <style>{SHELL_CSS}</style>
-      <div className="tg-frame">
+      <div className="tg-frame" style={fit !== null ? { transform: `scale(${fit})` } : undefined}>
         <div className="tg-screen">
           {children}
           {showStatusBar && <StatusBar time={statusTime} tint={statusTint} />}
@@ -236,8 +260,9 @@ const SHELL_CSS = `
   isolation: isolate;
 }
 
-/* Short windows: step the whole frame down rather than cropping the screen,
-   so the layout a screen agent measured against 440x956 never changes. */
+/* Short windows: pre-hydration fallback only. The Shell effect scales the
+   frame continuously once JS is live, so the screen is never cropped and the
+   layout a screen agent measured against 440x956 never changes. */
 @media (max-height: 1000px) { .tg-frame { transform: scale(.94); } }
 @media (max-height: 940px)  { .tg-frame { transform: scale(.88); } }
 @media (max-height: 880px)  { .tg-frame { transform: scale(.82); } }

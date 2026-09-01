@@ -19,6 +19,10 @@
  * them scrolls, which is what makes the three-token shot and the two-token shot
  * the same component at different list lengths.
  *
+ * The vertical rhythm above the fold (top bar, balance block, action row) is
+ * pulled up well past the reference measurements so the screen fits a laptop
+ * viewport at 100% zoom instead of asking for 90%.
+ *
  * The one substitution that is the point of the whole demo sits under the
  * balance: where Tangem prints its local label `Wallet ☁️`, this build prints
  * the claimed subname. An unnamed wallet still reads `Wallet` — with a small
@@ -338,7 +342,7 @@ const CSS = `
 }
 
 .hm-balance-block {
-  margin-top: 68px;
+  margin-top: 18px;
   text-align: center;
 }
 
@@ -374,7 +378,7 @@ const CSS = `
 /* Actions ---------------------------------------------------------------- */
 
 .hm-actions {
-  margin-top: 56px;
+  margin-top: 28px;
   display: flex;
   justify-content: center;
   /* Centres at x 152 / 220 / 288 = 68pt apart on a 46pt circle. */
@@ -398,7 +402,7 @@ const CSS = `
 /* Promo card ------------------------------------------------------------- */
 /* Its own shallow cool-to-warm wash, sampled in docs/DESIGN.md. */
 
-.hm-promo { margin-top: 36px; }
+.hm-promo { margin-top: 28px; }
 
 .hm-promo__card {
   border-radius: var(--r-card);
@@ -543,7 +547,7 @@ const CSS = `
 
 .hm-coach {
   position: relative;
-  margin-top: 48px;
+  margin-top: 36px;
   display: flex;
   align-items: flex-start;
   gap: 12px;

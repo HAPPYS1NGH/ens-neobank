@@ -62,7 +62,6 @@ import {
   CHAINS,
   CHAIN_BY_KEY,
   COINS,
-  DEFAULT_NETWORK_IDS,
   NETWORKS,
   NETWORK_BY_ID,
   chainsForNetworks,
@@ -182,7 +181,9 @@ const DEFAULT_WALLET_ID = 'wallet-1'
 const emptyPersisted: Persisted = {
   wallets: [{ id: DEFAULT_WALLET_ID, label: 'Wallet', kind: 'mobile' }],
   activeWalletId: DEFAULT_WALLET_ID,
-  enabledNetworkIds: [...DEFAULT_NETWORK_IDS],
+  // A fresh wallet holds no tokens — the same rule the name mint follows.
+  // Nothing appears until the user adds it (Manage tokens or the receive flow).
+  enabledNetworkIds: [],
   contacts: [],
   onboarded: false,
 }
@@ -192,7 +193,7 @@ const initial: State = {
   owner: '',
   wallets: emptyPersisted.wallets.map((w) => ({ ...w, name: null })),
   activeWalletId: DEFAULT_WALLET_ID,
-  enabledNetworkIds: [...DEFAULT_NETWORK_IDS],
+  enabledNetworkIds: [],
   contacts: [],
   screen: { name: 'onboarding' },
   history: [],

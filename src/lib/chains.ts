@@ -187,8 +187,6 @@ export interface NetworkSpec {
   writable: boolean
   /** Why it cannot be written. Shown to the user; never hide the network. */
   reason?: string
-  /** On for a fresh wallet, matching the home screen in IMG_4306. */
-  defaultOn?: boolean
 }
 
 /** Reasons, written once so the same network never gets two explanations. */
@@ -199,14 +197,14 @@ const NO_EVM_ENTRY = (name: string) =>
 
 export const NETWORKS: readonly NetworkSpec[] = [
   // --- Bitcoin -----------------------------------------------------------
-  { id: 'btc-main', coinId: 'bitcoin', title: 'BITCOIN', tag: 'MAIN', network: 'Bitcoin', rowName: 'Bitcoin', ticker: 'BTC', color: '#F7931A', chain: 'btc', writable: true, defaultOn: true },
+  { id: 'btc-main', coinId: 'bitcoin', title: 'BITCOIN', tag: 'MAIN', network: 'Bitcoin', rowName: 'Bitcoin', ticker: 'BTC', color: '#F7931A', chain: 'btc', writable: true },
 
   // --- Ethereum and its L2s (IMG_4305) ------------------------------------
-  { id: 'eth-main',      coinId: 'ethereum', title: 'ETHEREUM',     tag: 'MAIN',    network: 'Ethereum',     rowName: 'Ethereum',        ticker: 'ETH', color: '#627EEA', chain: 'eth',    writable: true, defaultOn: true },
+  { id: 'eth-main',      coinId: 'ethereum', title: 'ETHEREUM',     tag: 'MAIN',    network: 'Ethereum',     rowName: 'Ethereum',        ticker: 'ETH', color: '#627EEA', chain: 'eth',    writable: true },
   { id: 'eth-arb-nova',  coinId: 'ethereum', title: 'ARBITRUM NOVA', tag: 'MAIN L2', network: 'Arbitrum Nova', rowName: 'Arbitrum Nova (ETH)', ticker: 'ETH', color: '#EF8220', writable: false, reason: NO_EVM_ENTRY('Arbitrum Nova') },
   { id: 'eth-arb',       coinId: 'ethereum', title: 'ARBITRUM ONE', tag: 'MAIN L2', network: 'Arbitrum One', rowName: 'Arbitrum One (ETH)', ticker: 'ETH', color: '#12AAFF', chain: 'arb',   writable: true },
   { id: 'eth-aurora',    coinId: 'ethereum', title: 'AURORA',       tag: 'MAIN L2', network: 'Aurora',       rowName: 'Aurora (ETH)',    ticker: 'ETH', color: '#70D44B', writable: false, reason: NO_EVM_ENTRY('Aurora') },
-  { id: 'eth-base',      coinId: 'ethereum', title: 'BASE',         tag: 'MAIN L2', network: 'Base',         rowName: 'Base (ETH)',      ticker: 'ETH', color: '#0052FF', chain: 'base',  writable: true, defaultOn: true },
+  { id: 'eth-base',      coinId: 'ethereum', title: 'BASE',         tag: 'MAIN L2', network: 'Base',         rowName: 'Base (ETH)',      ticker: 'ETH', color: '#0052FF', chain: 'base',  writable: true },
   { id: 'eth-blast',     coinId: 'ethereum', title: 'BLAST',        tag: 'MAIN L2', network: 'Blast',        rowName: 'Blast (ETH)',     ticker: 'ETH', color: '#FCFC03', writable: false, reason: NO_EVM_ENTRY('Blast') },
   { id: 'eth-cyber',     coinId: 'ethereum', title: 'CYBER',        tag: 'MAIN L2', network: 'Cyber',        rowName: 'Cyber (ETH)',     ticker: 'ETH', color: '#32A0FF', writable: false, reason: NO_EVM_ENTRY('Cyber') },
   { id: 'eth-linea',     coinId: 'ethereum', title: 'LINEA',        tag: 'MAIN L2', network: 'Linea',        rowName: 'Linea (ETH)',     ticker: 'ETH', color: '#121212', chain: 'linea', writable: true },
@@ -282,11 +280,6 @@ export function networksForCoin(coinId: CoinId): NetworkSpec[] {
 export function networkById(id: string): NetworkSpec | undefined {
   return NETWORK_BY_ID[id]
 }
-
-/** The toggles a fresh wallet starts with — Bitcoin, Ethereum, Base (IMG_4306). */
-export const DEFAULT_NETWORK_IDS: readonly string[] = NETWORKS.filter((n) => n.defaultOn).map(
-  (n) => n.id,
-)
 
 /**
  * True when every network under a coin is unwritable. The Manage tokens rows
