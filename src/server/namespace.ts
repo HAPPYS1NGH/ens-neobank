@@ -17,8 +17,9 @@ import { normalizeLabel, validateLabel } from './validation'
  * applied server-side so a client cannot spoof or omit it.
  */
 /**
- * ENSIP-11's EVM fallback record (0x80000000). We write it at mint time so a
- * name resolves on any EVM chain the wallet later adds, which means the
+ * ENSIP-11's EVM fallback record (0x80000000). A name mints with NO address
+ * records at all; the fallback is written alongside the first EVM address the
+ * user adds, so the name then resolves on any other EVM chain. Either way the
  * read-merge-write path must recognise it — it is ours, not an unknown record.
  */
 const EVM_DEFAULT_COIN = 2147483648
@@ -136,13 +137,16 @@ export async function findNameByOwner(owner: string): Promise<WalletName | null>
 export interface MintInput {
   label: string
   owner: string
-  /** The account being named, whose address seeds the first record. */
-  chain: ChainKey
-  address: string
   /** Display name text record, i.e. what the user typed. */
   displayName?: string
 }
 
+/**
+ * Mints the name with NO address records — not even the wallet's own Ethereum
+ * address. A name only resolves to a chain once the user deliberately adds
+ * that chain (PATCH /api/subnames), so no addresses are written here. The
+ * display name is the only text record.
+ */
 export async function mintName(input: MintInput): Promise<WalletName> {
   const cfg = getServerConfig()
   const normalized = normalizeLabel(input.label)
@@ -153,15 +157,6 @@ export async function mintName(input: MintInput): Promise<WalletName> {
   const { isAvailable } = await client.isSubnameAvailable(fullName)
   if (!isAvailable) throw httpError('That name is already taken', 409, 'NAME_TAKEN')
 
-  const addresses: AddressRecord[] = [
-    { chain: chainNameFor(input.chain), value: input.address },
-  ]
-  // Seed the EVM fallback record too, so the name resolves on any EVM chain
-  // the wallet later adds rather than showing nothing but the one account.
-  if (CHAINS.find((c) => c.key === input.chain)?.evm) {
-    addresses.push({ chain: ChainName.Default, value: input.address })
-  }
-
   const texts: TextRecord[] = []
   if (input.displayName?.trim()) {
     texts.push({ key: 'name', value: input.displayName.trim().slice(0, 200) })
@@ -171,7 +166,7 @@ export async function mintName(input: MintInput): Promise<WalletName> {
     label: normalized,
     parentName: cfg.parentName,
     owner: input.owner,
-    addresses,
+    addresses: [],
     texts,
     metadata: [{ key: DEMO_TAG_KEY, value: DEMO_TAG_VALUE }],
   })
@@ -209,6 +204,13 @@ export async function addAddress(input: AddAddressInput): Promise<WalletName> {
   const spec = CHAINS.find((c) => c.key === input.chain)
   if (!spec) throw httpError(`Unknown chain ${input.chain}`, 400, 'CHAIN_UNKNOWN')
   byCoin[String(spec.coin)] = input.address
+
+  // The first EVM address written also seeds the ENSIP-11 fallback record, so
+  // the name then resolves on any other EVM chain. It never appears in the UI
+  // (no chain maps to that coin type) and carries the same address.
+  if (spec.evm && !byCoin[String(EVM_DEFAULT_COIN)]) {
+    byCoin[String(EVM_DEFAULT_COIN)] = input.address
+  }
 
   // Fail closed: refuse to write rather than silently drop a record whose coin
   // type we cannot map back to a chain the SDK will accept.

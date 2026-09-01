@@ -23,18 +23,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     if (!body) throw httpError('Malformed request', 400, 'JSON_INVALID')
 
-    const { label, chain, address, owner, signature, displayName } = body as Record<string, string>
+    const { label, owner, signature, displayName } = body as Record<string, string>
     if (!label) throw httpError('No name given', 400, 'LABEL_MISSING')
-    if (!chain || !isChainKey(chain)) throw httpError('Unknown chain', 400, 'CHAIN_UNKNOWN')
-    if (!address) throw httpError('No account address given', 400, 'ADDRESS_MISSING')
 
     const verified = await requireSigner(claimMessage(label, owner), signature, owner)
 
+    // No address records here — a name mints bare and gains a chain's address
+    // only through PATCH, one deliberate add at a time.
     const name = await mintName({
       label,
       owner: verified,
-      chain,
-      address,
       displayName: displayName || label,
     })
     return ok({ name }, 201)

@@ -26,9 +26,10 @@
  *    through a standard ENS client.
  *
  * 2. Coin `2147483648` (0x80000000) is ENSIP-11's EVM fallback and it is OURS.
- *    It is written at mint time so the name resolves on EVM chains added
- *    later. The read-merge-write path in `namespace.ts` must recognise it or
- *    the second network write fails closed. `EVM_DEFAULT_COIN` below.
+ *    A name mints bare (no addresses); the fallback is written alongside the
+ *    first EVM address the user adds, so the name then resolves on EVM chains
+ *    added later. The read-merge-write path in `namespace.ts` must recognise
+ *    it or the second network write fails closed. `EVM_DEFAULT_COIN` below.
  *
  * 3. XRP cannot be written. The registry rejects coin type 144 outright
  *    ("addresses.5.coin is not a valid coin"). This is not an SDK gap and no

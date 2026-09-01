@@ -10,9 +10,10 @@
  *
  * The "what it receives" list is read from the mint's response
  * (`ensName.addresses`), not from the networks the user happens to have on.
- * `claimName` writes one record per chain and keeps going if a follow-up write
- * fails, so the registry state is the honest thing to show; deriving the list
- * from local toggle state could promise an address the name does not hold yet.
+ * A name mints bare — no address records at all — and chains are added one at
+ * a time afterwards, so the registry state is the honest thing to show;
+ * deriving the list from local toggle state could promise an address the name
+ * does not hold yet.
  */
 
 import { Check } from '../components/Icons'
@@ -70,7 +71,9 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
         </p>
 
         <p className="tgc__lede">
-          Anything sent to this name reaches this wallet, on every network you turn on.
+          {rows.length > 0
+            ? 'Anything sent to this name reaches this wallet, on every network you turn on.'
+            : 'This name has no chains attached yet. Add one from Manage tokens or Receive, and anything sent to the name reaches this wallet there.'}
         </p>
 
         {rows.length > 0 && (

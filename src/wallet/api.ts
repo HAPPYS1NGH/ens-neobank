@@ -140,15 +140,16 @@ export async function readName(nameOrLabel: string): Promise<WalletNameDTO> {
 
 export interface MintInput {
   label: string
-  /** The chain whose address seeds the first record. */
-  chain: ChainKey
-  address: string
   owner: string
   signature: string
   /** Stored as the `name` text record — what the user actually typed. */
   displayName: string
 }
 
+/**
+ * The name mints with no address records at all. Chains are added afterwards,
+ * one at a time, through `addAddress`.
+ */
 export async function mintName(input: MintInput): Promise<WalletNameDTO> {
   const { name } = await request<{ name: WalletNameDTO }>('/api/subnames', {
     method: 'POST',

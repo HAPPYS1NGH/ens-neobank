@@ -470,41 +470,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       checkName: (label) => api.checkAvailability(label),
 
       /**
-       * Claims the name and, in the same action, writes an address record for
-       * every writable network already toggled on. The mint carries the
-       * Ethereum record plus the EVM fallback; the rest follow one at a time
-       * because the registry has no batch add.
+       * Claims the name and nothing more. The mint carries no address records —
+       * not even Ethereum — because a name should resolve only onto chains the
+       * user deliberately adds, which happens later through Manage tokens or
+       * the receive flow (`saveNetworks` / `writeChain`).
        *
        * If the mint fails nothing is stored locally either, so a retry starts
-       * from the same place. If a follow-up record fails the name still exists
-       * — that is the honest outcome, and Manage tokens can add it later.
+       * from the same place.
        */
       async claimName(label: string): Promise<WriteResult> {
         const seed = seedRef.current
         if (!seed) return { ok: false, error: 'Wallet is still starting up' }
         if (!wallet) return { ok: false, error: 'No wallet selected' }
 
-        const chains = chainsForNetworks(state.enabledNetworkIds)
-        // Mint against Ethereum when it is on, so the EVM fallback record is
-        // seeded at creation and every EVM chain added later merges cleanly.
-        const first: ChainKey = chains.includes('eth') ? 'eth' : (chains[0] ?? 'eth')
-
         dispatch({ type: 'busy', busy: true })
         try {
           const signature = await signOwnership(seed, api.claimMessage(label, state.owner))
-          let name = await api.mintName({
+          const name = await api.mintName({
             label,
-            chain: first,
-            address: addressFor(seed, first, 0),
             owner: state.owner,
             signature,
             displayName: label,
           })
-
-          for (const chain of chains) {
-            if (chain === first) continue
-            name = await writeChain(name.fullName, chain)
-          }
 
           dispatch({ type: 'setName', walletId: wallet.id, name })
           return { ok: true }
