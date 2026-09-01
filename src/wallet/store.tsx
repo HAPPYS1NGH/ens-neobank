@@ -205,7 +205,18 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ready': {
       const { persisted } = action
-      const wallets = persisted.wallets.map((w) => ({
+      // Storage written before wallet ids were guaranteed unique can hold
+      // duplicates (a length-based id reused after a delete). Keep the first
+      // of each id so React keys stay unique; fall back to a fresh wallet if
+      // nothing usable survived.
+      const seen = new Set<string>()
+      const deduped = persisted.wallets.filter((w) =>
+        seen.has(w.id) ? false : (seen.add(w.id), true),
+      )
+      const wallets = (deduped.length > 0
+        ? deduped
+        : emptyPersisted.wallets.map((w) => ({ ...w }))
+      ).map((w) => ({
         ...w,
         // Only the active wallet's name is looked up at boot — the demo has one
         // owner key, so a second wallet shares it and would collide.
@@ -216,7 +227,9 @@ function reducer(state: State, action: Action): State {
         ready: true,
         owner: action.owner,
         wallets,
-        activeWalletId: persisted.activeWalletId,
+        activeWalletId: wallets.some((w) => w.id === persisted.activeWalletId)
+          ? persisted.activeWalletId
+          : wallets[0].id,
         enabledNetworkIds: persisted.enabledNetworkIds,
         contacts: persisted.contacts,
         screen: persisted.onboarded ? { name: 'home' } : { name: 'onboarding' },
@@ -553,7 +566,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       removeContact: (id) => dispatch({ type: 'removeContact', id }),
 
       addWallet: (kind) => {
-        const id = `wallet-${state.wallets.length + 1}`
+        // Numbering by list length reuses an id after a delete ("wallet-2"
+        // twice, and React keys collide). Number past the highest id live.
+        const next =
+          state.wallets.reduce(
+            (max, x) => Math.max(max, Number(x.id.replace('wallet-', '')) || 0),
+            0,
+          ) + 1
+        const id = `wallet-${next}`
         dispatch({
           type: 'addWallet',
           wallet: { id, label: `Wallet ${state.wallets.length + 1}`, name: null, kind },
