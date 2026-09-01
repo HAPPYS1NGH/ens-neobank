@@ -42,6 +42,7 @@
  *   w.addContact({ name, note })  w.removeContact(id)
  *
  * DANGER
+ *   w.removeWallet(id)            deletes one wallet locally (never the last)
  *   w.resetWallet()               clears the seed and local state, reloads
  *
  * Everything except the name writes is simulated. See src/lib/assets.ts.
@@ -156,6 +157,7 @@ type Action =
   | { type: 'setName'; walletId: string; name: WalletNameDTO | null }
   | { type: 'setLabel'; walletId: string; label: string }
   | { type: 'addWallet'; wallet: Wallet }
+  | { type: 'removeWallet'; walletId: string }
   | { type: 'activateWallet'; walletId: string }
   | { type: 'setNetworks'; ids: string[] }
   | { type: 'addContact'; contact: Contact }
@@ -253,6 +255,19 @@ function reducer(state: State, action: Action): State {
       }
     case 'addWallet':
       return { ...state, wallets: [...state.wallets, action.wallet], activeWalletId: action.wallet.id }
+    case 'removeWallet': {
+      // The last wallet is the wallet — refuse rather than render an empty
+      // app. The UI hides the button at one wallet; this keeps the invariant
+      // even if a caller bypasses it.
+      if (state.wallets.length <= 1) return state
+      const wallets = state.wallets.filter((w) => w.id !== action.walletId)
+      return {
+        ...state,
+        wallets,
+        activeWalletId:
+          state.activeWalletId === action.walletId ? wallets[0].id : state.activeWalletId,
+      }
+    }
     case 'activateWallet':
       return { ...state, activeWalletId: action.walletId }
     case 'setNetworks':
@@ -309,6 +324,8 @@ interface Ctx extends State {
 
   addWallet: (kind: Wallet['kind']) => string
   activateWallet: (id: string) => void
+  /** Deletes one wallet locally. The last wallet cannot be deleted. */
+  removeWallet: (id: string) => void
   resetWallet: () => void
 }
 
@@ -544,6 +561,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return id
       },
       activateWallet: (id) => dispatch({ type: 'activateWallet', walletId: id }),
+
+      // Deleting a wallet is local: the identity, its enabled networks and its
+      // name record here. The name itself is a real subname on the registry and
+      // stays there — deletion does not (and cannot) unwind it. This demo runs
+      // one owner key for every wallet, so a name the deleted wallet held can
+      // resurface on the next boot; the delete note on WalletDetail says so.
+      removeWallet: (id) => dispatch({ type: 'removeWallet', walletId: id }),
 
       resetWallet: () => {
         resetSeed()

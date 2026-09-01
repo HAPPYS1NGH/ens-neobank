@@ -27,7 +27,7 @@ import * as api from '../api'
 import { CHAIN_BY_KEY, useWallet, type ChainKey, type WalletNameDTO } from '../store'
 import { chainsForNetworks } from '@/lib/chains'
 import { fullNameFor, normalizeLabelPreview } from '@/lib/format'
-import { ChevronRight, Refresh } from '../components/Icons'
+import { ChevronRight, Refresh, Trash } from '../components/Icons'
 
 export interface WalletDetailProps {
   /** Which wallet from `w.wallets` this screen is showing. */
@@ -169,6 +169,30 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
   // request that comes back with the mint's own error.
   const canClaim =
     (check.status === 'free' || check.status === 'unknown') && !w.busy
+
+  /* ------------------------------------------------------- the delete */
+
+  // Deletion is destructive, so it asks twice: the first tap arms the row,
+  // the second commits. Arming decays on its own so a stray tap never leaves
+  // a loaded delete sitting there.
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const timer = window.setTimeout(() => setArmed(false), 3500)
+    return () => window.clearTimeout(timer)
+  }, [armed])
+
+  const deletable = w.wallets.length > 1
+
+  function deleteWallet() {
+    if (!armed) {
+      setArmed(true)
+      return
+    }
+    setArmed(false)
+    w.removeWallet(wallet.id)
+    w.back()
+  }
 
   return (
     <div className="wd">
@@ -322,6 +346,36 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
               This is a real subname under {w.parent}, written to Ethereum mainnet, covering every
               network this wallet has turned on.
             </p>
+          </>
+        )}
+
+        {/* ---------------------------------------------------- the delete */}
+        {deletable && (
+          <>
+            <div className="wd-group-head">
+              <span>This device</span>
+            </div>
+            <div className="wd-card">
+              <button
+                className="wd-delete"
+                data-armed={armed}
+                onClick={deleteWallet}
+                aria-label={armed ? 'Tap again to delete this wallet' : 'Delete this wallet'}
+              >
+                <span className="wd-delete__icon">
+                  <Trash size={19} />
+                </span>
+                <span className="wd-delete__main">
+                  <span className="wd-delete__title">
+                    {armed ? 'Tap again to delete' : 'Delete wallet'}
+                  </span>
+                  <span className="wd-delete__sub">
+                    Removes this wallet from this device. Its name is a real subname and stays on
+                    the registry.
+                  </span>
+                </span>
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -505,4 +559,50 @@ const CSS = `
 }
 .wd-claim:disabled { opacity: .35; cursor: default; }
 .wd-claim:active:not(:disabled) { opacity: .8; }
+
+/* The delete row. Same row language as the rest of the card, red ink. The
+ * armed state deepens the tint and stiffens the copy — that is the confirm. */
+.wd-delete {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 18px;
+  text-align: left;
+}
+
+.wd-delete__icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  display: grid;
+  place-items: center;
+}
+
+.wd-delete__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wd-delete__title {
+  font-size: 16px;
+  font-weight: var(--fw-semibold);
+  color: var(--danger);
+}
+
+.wd-delete__sub {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+
+.wd-delete[data-armed="true"] .wd-delete__icon { background: var(--danger); color: #fff; }
+.wd-delete[data-armed="true"]:active { opacity: .7; }
 `

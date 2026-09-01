@@ -344,6 +344,10 @@ const CSS = `
 
 .hm-name {
   margin-top: 16px;
+  /* A button shrink-wraps to its content, so the balance block's
+   * text-align cannot centre it — the auto margins do. */
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   align-items: center;
   justify-content: center;
