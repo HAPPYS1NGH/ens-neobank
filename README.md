@@ -32,10 +32,11 @@ can use it. This demo makes it a subname instead.
 | Send | Paste a hex address | Type `alice`, or any ENS name; it resolves per chain |
 | Details → Address book | Contacts stored as hex | Contacts stored as ENS names, resolved live |
 
-**One name, every chain.** The wallet gets one name at creation. Every network the user
-toggles on in *Manage tokens* adds its address to that same name, so a single
-`harpreet.tange.eth` receives BTC, ETH, Base, Arbitrum, Solana and the rest of the writable
-set — not a different identity per network.
+**One name, every chain.** The wallet gets one name at creation, minted bare — with no
+address records. Every network the user toggles on in *Manage tokens* then writes that
+chain's address onto the same name, so a single `harpreet.tange.eth` gains BTC, ETH, Base,
+Arbitrum, Solana and the rest of the thirteen-chain writable set as the user enables them —
+not a different identity per network.
 
 Tangem's whole pitch is that the key is on the card and the wallet is yours. A name the
 wallet issues extends that from the key to the address: the same self-custody, now with a
@@ -83,6 +84,7 @@ show the phone.
 | `NAMESPACE_PARENT_NAME` | The ENS parent you own — `tange.eth` for this build. Must appear in `ALLOWED_PARENTS` in `src/server/config.ts` or the server refuses to start. |
 | `NAMESPACE_NETWORK` | `mainnet` or `sepolia`. |
 | `ENS_RPC_URL` | Public Ethereum RPC used to resolve names *outside* our parent (`vitalik.eth`) through standard ENS with CCIP-Read. |
+| `NEXT_PUBLIC_DISPLAY_PARENT` | The one client-side variable. Display-only parent the UI shows in names (`label.<parent>`); defaults to `tange.eth`. Set it to match `NAMESPACE_PARENT_NAME`. |
 
 ### Scripts
 
@@ -191,7 +193,8 @@ something you will never get back.
   cleared. `addAddress` in `src/server/namespace.ts` reads the current state and re-sends
   everything it means to keep. Route every write through it.
 - **Availability is inverted.** `GET /api/v1/subnames/{full}` returns **404 when the name is
-  free** and 200 when taken. The availability route un-inverts it; nothing else re-inverts it.
+  free** and 200 when taken. The availability route passes the SDK's availability flag
+  through as-is rather than translating status codes.
 - **The EVM fallback record is ours.** Coin `2147483648` (0x80000000, ENSIP-11's EVM default)
   is written at mint time so the name resolves on EVM chains added later. The merge path in
   `namespace.ts` must recognise it or the second network write fails closed.
@@ -207,10 +210,9 @@ something you will never get back.
 - **Labels are ASCII.** The parent may be Unicode but labels are not, so `Harpreet S`
   becomes `harpreet-s`. The name field shows the normalized label live rather than mangling
   it silently, and the server enforces 3–20 characters plus a reserved list.
-- **The signed messages still say `D'CENT demo`.** The proof module and the client's message
-  builders were inherited from the D'CENT build and the literal prefix is shared on both
-  sides — the server rebuilds the string byte for byte — so changing one side alone breaks
-  every write. It is a constant, not a label.
+- **The signed messages say `Tangem demo`.** The proof module and the client's message
+  builders share that literal prefix — the server rebuilds the string byte for byte — so
+  changing one side alone breaks every write. It is a constant, not a label.
 - **The registry is shared.** The tag keeps this demo's names apart from the other client
   demo already in the parent, but see `cleanup` above: the tag also matches names visitors
   claimed, so it stays a dry run until you name labels.

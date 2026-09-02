@@ -108,7 +108,10 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
             <span className="balance__frac">{balance.fraction}</span>
           </h1>
 
-          {w.isNamed ? (
+          {/* The claim prompt is for the first wallet only: every wallet here
+           * shares one owner key, so a second claim would overwrite the same
+           * identity. Later wallets stay on their local label. */}
+          {(w.isNamed || w.wallets[0]?.id !== w.wallet?.id) ? (
             // The claim, standing exactly where the local label stood. Tapping
             // it is the way into the choose-account sheet (IMG_4301): the row
             // that sheet lists is this exact string, so the tap target reads
@@ -324,11 +327,17 @@ const CSS = `
   margin-left: auto;
 }
 
+/* Icon-only, so the 44pt minimum tap target is the whole rule: the buttons
+ * grow to 44 and the -9px margins give that area back to the layout, so the
+ * glyph centres — and everything around them — sit where the shot has them. */
 .hm-top__btn {
   color: var(--icon-ink);
   display: grid;
   place-items: center;
   padding: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -9px;
 }
 .hm-top__btn:active { opacity: .6; }
 
@@ -507,6 +516,10 @@ const CSS = `
 .hm-token__quote {
   display: flex;
   align-items: center;
+  /* The delta's leading space sits inside a flex item and collapses; the
+   * 4px gap (the same one the stacks above and below use) separates
+   * price from movement instead. */
+  gap: 4px;
   font-size: var(--fs-sub);
   font-weight: var(--fw-medium);
   color: var(--text-3);
@@ -596,12 +609,20 @@ const CSS = `
   color: var(--text-2);
 }
 
+/* Same 44pt tap target as the top bar: the negative margin gives the hit area
+ * back so the coach card's layout does not move a pixel, and the grid keeps
+ * the glyph centred in the grown box. */
 .hm-coach__close {
   flex: none;
+  display: grid;
+  place-items: center;
   color: var(--text-3);
   font-size: 16px;
   line-height: 1;
   padding: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -12px;
 }
 .hm-coach__close:active { opacity: .6; }
 

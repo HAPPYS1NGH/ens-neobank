@@ -19,6 +19,7 @@
  * handoff runs through the contact pills Send renders from `w.contacts`.
  */
 
+import { useEffect, useRef } from 'react'
 import { WalletProvider, useWallet } from '@/wallet/store'
 import { Shell } from '@/wallet/components/Shell'
 import { Onboarding } from '@/wallet/screens/Onboarding'
@@ -144,6 +145,30 @@ function Boot() {
 
 function App() {
   const w = useWallet()
+
+  /* The deep link that wipes the demo: `?reset=1` clears the seed and local
+   * state and reloads. The param is stripped before the reload so the fresh
+   * page does not fire it again, and a ref guards the double-invoke React
+   * strict mode gives effects in development. Read straight off the URL —
+   * this render tree is entirely client-side, so there is nothing for
+   * useSearchParams to wait on.
+   */
+  const resetFired = useRef(false)
+  useEffect(() => {
+    if (resetFired.current) return
+    resetFired.current = true
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('reset') !== '1') return
+    params.delete('reset')
+    const rest = params.toString()
+    window.history.replaceState(
+      null,
+      '',
+      rest ? `${window.location.pathname}?${rest}` : window.location.pathname,
+    )
+    w.resetWallet()
+  }, [w])
+
   return (
     <Shell>
       {w.ready ? (

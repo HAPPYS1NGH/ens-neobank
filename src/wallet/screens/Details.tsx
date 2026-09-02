@@ -22,12 +22,14 @@
  * name yet, which is the only outstanding thing this build can tell you about.
  */
 
+import { useEffect, useState } from 'react'
 import { useWallet } from '../store'
 import {
   AddressBook as AddressBookIcon,
   ChevronRight,
   Plus,
   SOCIALS,
+  Trash,
   Wallet as WalletIcon,
   WalletConnect,
 } from '../components/Icons'
@@ -43,6 +45,27 @@ export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
   /** Nothing behind these rows in this build; say so rather than dead-ending. */
   const notInDemo = (what: string) => () =>
     w.showToast(`${what} is outside this demo — names are the part that is real`)
+
+  /* -------------------------------------------------------- the reset */
+
+  // Resetting is destructive, so it asks twice — the same arm-then-commit the
+  // delete row in WalletDetail uses. Arming decays on its own so a stray tap
+  // never leaves a loaded reset sitting there.
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const timer = window.setTimeout(() => setArmed(false), 3500)
+    return () => window.clearTimeout(timer)
+  }, [armed])
+
+  function resetApp() {
+    if (!armed) {
+      setArmed(true)
+      return
+    }
+    setArmed(false)
+    w.resetWallet()
+  }
 
   return (
     <div className="dt">
@@ -150,6 +173,32 @@ export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
           <button className="dt-row dt-row--plain" onClick={notInDemo('The terms of service')}>
             <span className="dt-row-title">Terms of service</span>
             <ChevronRight size={20} className="dt-chevron" />
+          </button>
+        </div>
+
+        {/* ------------------------------------------------------- the reset */}
+        {/* The one destructive row on the screen. It clears the app's local
+         * state — the seed, wallets, settings — and reloads; the names minted
+         * along the way are real registry entries and stay there. */}
+        <div className="dt-card">
+          <button
+            className="dt-row dt-row--reset"
+            data-armed={armed}
+            onClick={resetApp}
+            aria-label={armed ? 'Tap again to reset this app' : 'Reset this app'}
+          >
+            <span className="dt-reset__icon">
+              <Trash size={19} />
+            </span>
+            <span className="dt-stack">
+              <span className="dt-reset__title">
+                {armed ? 'Tap again to reset' : 'Reset wallet'}
+              </span>
+              <span className="dt-reset__sub">
+                Clears this app's local state — keys, wallets, settings. Minted ENS names are not
+                deleted; they stay on the registry.
+              </span>
+            </span>
           </button>
         </div>
 
@@ -354,4 +403,31 @@ const CSS = `
   font-size: 13px;
   color: var(--text-3);
 }
+
+/* The reset row. Same row language as the rest of the card, red ink — the
+ * armed state deepens the tint and stiffens the copy, which is the confirm. */
+.dt-row--reset { align-items: flex-start; }
+.dt-row--reset .dt-stack { padding-top: 6px; }
+.dt-reset__icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  display: grid;
+  place-items: center;
+}
+.dt-reset__title {
+  font-size: 16px;
+  font-weight: var(--fw-semibold);
+  color: var(--danger);
+}
+.dt-reset__sub {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+.dt-row--reset[data-armed="true"] .dt-reset__icon { background: var(--danger); color: #fff; }
+.dt-row--reset[data-armed="true"]:active { opacity: .7; }
 `

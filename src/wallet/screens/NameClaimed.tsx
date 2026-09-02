@@ -16,10 +16,10 @@
  * does not hold yet.
  */
 
-import { Check } from '../components/Icons'
-import { CoinMark } from '../components/CoinMark'
+import { Check, Copy, Plus } from '../components/Icons'
+import { NetworkMark } from '../components/CoinMark'
 import { shortAddress } from '@/lib/format'
-import { NETWORKS, type ChainKey, type CoinId, useWallet } from '../store'
+import { NETWORKS, type ChainKey, useWallet } from '../store'
 
 /* ---------------------------------------------------------------- screen */
 
@@ -36,6 +36,16 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
   const name = w.ensName
   const fullName = name?.fullName ?? w.walletTitle
 
+  /** Same pattern as the Receive sheet: clipboard, then a toast says it happened. */
+  async function copyName() {
+    try {
+      await navigator.clipboard.writeText(fullName)
+      w.showToast('Name copied')
+    } catch {
+      w.showToast('Could not copy')
+    }
+  }
+
   // One row per chain the name actually holds a record for, in CHAINS order.
   // Several networks can share a chain (Ethereum main and the USDT ERC20 row),
   // and they share one address record, so they share one row here too.
@@ -46,10 +56,10 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
       if (!network) return null
       return {
         chain,
+        networkId: network.id,
         address: name?.addresses[chain] ?? '',
         rowName: network.rowName,
         tag: network.tag,
-        coinId: network.coinId as CoinId,
       }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -76,13 +86,13 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
             : 'This name has no chains attached yet. Add one from Manage tokens or Receive, and anything sent to the name reaches this wallet there.'}
         </p>
 
-        {rows.length > 0 && (
+        {rows.length > 0 ? (
           <section className="tgc__section">
             <h2 className="tgc__section-label">It receives on</h2>
             <div className="card">
               {rows.map((row) => (
                 <div className="row tgc__row" key={row.chain}>
-                  <CoinMark coinId={row.coinId} size={39} label={row.rowName} />
+                  <NetworkMark networkId={row.networkId} size={39} label={row.rowName} />
                   <div className="row__main">
                     <p className="tgc__row-title">
                       {row.rowName}
@@ -94,6 +104,23 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
               ))}
             </div>
           </section>
+        ) : (
+          // A bare mint holds no address records, so the receipt has one row
+          // to show: the name itself, copyable, and the one next step — turn
+          // networks on, which is what puts rows in the section above.
+          <>
+            <button className="pill pill--light tgc__copy" onClick={copyName}>
+              <Copy size={20} />
+              Copy name
+            </button>
+            <button
+              className="tgc__next"
+              onClick={() => w.openSheet({ kind: 'manageTokens' })}
+            >
+              <Plus size={16} />
+              Add a network to make it receive on-chain
+            </button>
+          </>
         )}
       </div>
 
@@ -199,6 +226,29 @@ const NAME_CLAIMED_CSS = `
   color: var(--text-3);
   text-align: right;
 }
+
+/* The empty state. The Copy pill is the Receive sheet's, sized the same
+ * (44pt, 22px sides); the next step is the app's quiet accent line, the way
+ * the Receive sheet points at "Add network" — nothing new is invented. */
+.tgc__copy {
+  margin-top: 30px;
+  height: 44px;
+  padding: 0 22px;
+  font-size: 16px;
+  font-weight: var(--fw-medium);
+}
+.tgc__copy:active { opacity: .7; }
+
+.tgc__next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-semibold);
+  color: var(--accent);
+}
+.tgc__next:active { opacity: .7; }
 
 .tgc__foot {
   flex: none;

@@ -136,13 +136,16 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
 
     const result = await w.saveNetworks(draft)
 
+    // The write is over either way — the row spinners must not outlive it.
+    setPendingChains(new Set())
+
     if (result.ok) {
-      if (needed.length > 0 && w.ensName) {
-        setJustAdded(new Set(needed))
+      if (result.written.length > 0 && w.ensName) {
+        setJustAdded(new Set(result.written))
         w.showToast(
-          needed.length === 1
-            ? `${CHAIN_BY_KEY[needed[0]].network} added to ${w.ensName.fullName}`
-            : `${needed.length} networks added to ${w.ensName.fullName}`,
+          result.written.length === 1
+            ? `${CHAIN_BY_KEY[result.written[0]].network} added to ${w.ensName.fullName}`
+            : `${result.written.length} networks added to ${w.ensName.fullName}`,
         )
       } else if (!w.ensName) {
         // An unnamed wallet saved locally only. Say so rather than letting a
@@ -155,10 +158,10 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
         setJustAdded(new Set())
       }, 5000)
     } else {
-      // Nothing was rolled back — records written before the failure stand,
-      // and a retry is safe because add-address is a read-merge-write.
-      setError(result.error)
-      setPendingChains(new Set())
+      // Nothing was rolled back — the chains in `result.written` wrote and
+      // stand (the store dispatches each as it lands), and a retry is safe
+      // because add-address is a read-merge-write.
+      setError(result.error ?? 'Could not update the name')
       setPhase('error')
     }
   }
@@ -167,7 +170,7 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
     if (!network.writable) {
       return network.reason ? { text: network.reason, tone: 'muted' } : null
     }
-    if (network.chain && pendingChains.has(network.chain) && fullName) {
+    if (network.chain && saving && pendingChains.has(network.chain) && fullName) {
       return { text: `Writing the address to ${fullName}…`, tone: 'muted' }
     }
     if (
@@ -353,7 +356,11 @@ function NetworkBlock({
       {geometry.map(({ network, centre }) => {
         const note = noteFor(network)
         const on = draft.has(network.id)
-        const pending = network.writable && !!network.chain && pendingChains.has(network.chain)
+        // A write in flight, not a write that once started — pendingChains is
+        // cleared when the save resolves, and the `saving` guard keeps the
+        // spinner off in the beat before that clear lands.
+        const pending =
+          saving && network.writable && !!network.chain && pendingChains.has(network.chain)
         return (
           <div key={network.id} className="mt-net" style={{ top: centre - NETWORK_ROW_H / 2 }}>
             <div className="mt-net__row">

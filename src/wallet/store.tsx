@@ -35,7 +35,8 @@
  *   await w.checkName(label)      -> { label, available, parentName } | throws ApiError
  *   await w.claimName(label)      -> { ok } | { ok: false, error }
  *   w.skipName()                  the user ticked 'Continue without a name'
- *   await w.saveNetworks(ids)     diffs against what is written and adds records
+ *   await w.saveNetworks(ids)     diffs against what is written and adds records,
+ *                                 reporting which chains wrote and which failed
  *   await w.resolve(query, chain) -> ResolutionDTO
  *
  * ADDRESS BOOK
@@ -134,6 +135,8 @@ export type Sheet =
 
 interface State {
   ready: boolean
+  /** Once true the user is past first-run onboarding, whatever screen is up. */
+  onboarded: boolean
   owner: string
   wallets: Wallet[]
   activeWalletId: string
@@ -149,6 +152,8 @@ interface State {
 
 type Action =
   | { type: 'ready'; owner: string; persisted: Persisted; name: WalletNameDTO | null }
+  /** First-run onboarding is over — claim completed or the user skipped it. */
+  | { type: 'onboard' }
   | { type: 'navigate'; screen: Screen }
   | { type: 'back' }
   | { type: 'resetTo'; screen: Screen }
@@ -190,6 +195,7 @@ const emptyPersisted: Persisted = {
 
 const initial: State = {
   ready: false,
+  onboarded: false,
   owner: '',
   wallets: emptyPersisted.wallets.map((w) => ({ ...w, name: null })),
   activeWalletId: DEFAULT_WALLET_ID,
@@ -233,10 +239,17 @@ function reducer(state: State, action: Action): State {
           : wallets[0].id,
         enabledNetworkIds: persisted.enabledNetworkIds,
         contacts: persisted.contacts,
+        onboarded: persisted.onboarded,
         screen: persisted.onboarded ? { name: 'home' } : { name: 'onboarding' },
         history: [],
       }
     }
+    // One-way latch. Boot reads this flag, not the current screen, so a
+    // refresh on any screen — the name claim included — lands a returning
+    // user back on home with their wallet intact.
+    case 'onboard':
+      if (state.onboarded) return state
+      return { ...state, onboarded: true }
     case 'navigate':
       return {
         ...state,
@@ -303,6 +316,22 @@ function reducer(state: State, action: Action): State {
 
 export type WriteResult = { ok: true } | { ok: false; error: string }
 
+/**
+ * Per-chain outcome of a Manage tokens save. Chains are written one by one and
+ * each result is kept: a failed chain does not discard the records that did
+ * write, and the caller can show exactly which rows landed and which did not.
+ */
+export type NetworkWriteResult = {
+  /** True when every needed chain wrote. */
+  ok: boolean
+  /** Chains whose address record is now on the name. */
+  written: ChainKey[]
+  /** Chains that errored — their record may or may not exist. */
+  failed: ChainKey[]
+  /** The first failure's message, for the error line under the Save button. */
+  error?: string
+}
+
 interface Ctx extends State {
   /** The parent every name is issued under: `tange.eth`. Not `tangem.eth`. */
   parent: string
@@ -330,7 +359,7 @@ interface Ctx extends State {
   checkName: (label: string) => Promise<api.AvailabilityDTO>
   claimName: (label: string) => Promise<WriteResult>
   skipName: () => void
-  saveNetworks: (ids: string[]) => Promise<WriteResult>
+  saveNetworks: (ids: string[]) => Promise<NetworkWriteResult>
   resolve: (query: string, chain: ChainKey) => Promise<ResolutionDTO>
 
   addContact: (input: { name: string; note?: string }) => void
@@ -389,7 +418,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       activeWalletId: state.activeWalletId,
       enabledNetworkIds: state.enabledNetworkIds,
       contacts: state.contacts,
-      onboarded: state.screen.name !== 'onboarding' && state.screen.name !== 'nameWallet',
+      onboarded: state.onboarded,
     }
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
@@ -398,11 +427,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [
     state.ready,
+    state.onboarded,
     state.wallets,
     state.activeWalletId,
     state.enabledNetworkIds,
     state.contacts,
-    state.screen,
   ])
 
   useEffect(() => {
@@ -495,6 +524,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           })
 
           dispatch({ type: 'setName', walletId: wallet.id, name })
+          // The claim is what ends first-run onboarding, even if the user
+          // never reaches the confirmation screen.
+          dispatch({ type: 'onboard' })
           return { ok: true }
         } catch (error) {
           const message =
@@ -509,6 +541,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       /** The deliberate opt-out. Nothing is written; the local label stands. */
       skipName() {
+        dispatch({ type: 'onboard' })
         dispatch({ type: 'resetTo', screen: { name: 'home' } })
       },
 
@@ -521,24 +554,40 @@ export function WalletProvider({ children }: { children: ReactNode }) {
        * silently breaking their next payment is worse than an extra record.
        * The README says so out loud.
        */
-      async saveNetworks(ids: string[]): Promise<WriteResult> {
+      async saveNetworks(ids: string[]): Promise<NetworkWriteResult> {
         dispatch({ type: 'setNetworks', ids })
-        if (!ensName) return { ok: true }
+        if (!ensName) return { ok: true, written: [], failed: [] }
 
         const needed = chainsForNetworks(ids).filter((c) => !writtenChains.has(c))
-        if (needed.length === 0) return { ok: true }
+        if (needed.length === 0) return { ok: true, written: [], failed: [] }
 
         dispatch({ type: 'busy', busy: true })
+        const written: ChainKey[] = []
+        const failed: ChainKey[] = []
+        let firstError: string | undefined
         try {
-          let name = ensName
           for (const chain of needed) {
-            name = await writeChain(ensName.fullName, chain)
+            try {
+              const name = await writeChain(ensName.fullName, chain)
+              // Dispatched per chain so a later failure cannot discard the
+              // records that did write — each one lands in state as it lands
+              // on the registry.
+              dispatch({ type: 'setName', walletId: wallet.id, name })
+              written.push(chain)
+            } catch (error) {
+              if (!firstError) {
+                firstError =
+                  error instanceof Error ? error.message : 'Could not update the name'
+              }
+              failed.push(chain)
+            }
           }
-          dispatch({ type: 'setName', walletId: wallet.id, name })
-          return { ok: true }
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Could not update the name'
-          return { ok: false, error: message }
+          return {
+            ok: failed.length === 0,
+            written,
+            failed,
+            ...(firstError ? { error: firstError } : {}),
+          }
         } finally {
           dispatch({ type: 'busy', busy: false })
         }

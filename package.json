@@ -8,7 +8,6 @@
     "build": "next build",
     "start": "next start -p 3008",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint",
     "cleanup": "node scripts/cleanup-demo-names.mjs",
     "check:secrets": "node scripts/check-client-boundary.mjs",
     "shots": "node shots/capture.mjs"

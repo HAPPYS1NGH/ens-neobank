@@ -107,7 +107,7 @@ export function AddNetworkSheet() {
     } else {
       // Nothing was rolled back — records written before the failure stand,
       // and a retry is safe because add-address is a read-merge-write.
-      setError(result.error)
+      setError(result.error ?? 'Could not update the name')
       setPendingChains(new Set())
       setRows(null)
       setPhase('error')

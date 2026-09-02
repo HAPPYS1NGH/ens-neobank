@@ -44,6 +44,10 @@
   --accent: #4396f7; /* + icons, MAIN / MAIN L2 tags, links, price-up */
   --accent-soft: #e8f4fe; /* the tinted circle behind an accent glyph */
   --accent-ink: #ffffff;
+  /* Keyboard focus. Only :focus-visible ever draws it, so a mouse click or a
+   * tap stays as quiet as the shots; a Tab shows one accent ring. */
+  --focus-ring: 2px solid var(--accent);
+  --focus-offset: 2px;
 
   /* ------------------------------------------------------- market + feedback */
   /* Tangem draws gains in the accent blue, not green. Do not "fix" this. */
@@ -215,6 +219,16 @@ textarea {
   border: 0;
   outline: 0;
   background: none;
+}
+
+/* The one focus treatment in the app. :focus-visible only matches keyboard
+ * focus, so mouse clicks and taps never paint a ring; the 2px offset keeps it
+ * off the accent-soft chips and pills it sits around, and outlines follow the
+ * element's own border-radius. This rule out-specifies the `outline: 0`
+ * above, so fields get the ring too, and no screen CSS re-kills it. */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 a {

@@ -3,6 +3,7 @@ import { handle, ok, httpError } from '@/server/http'
 import { mintName, addAddress, findNameByOwner } from '@/server/namespace'
 import { claimMessage, addAddressMessage, requireSigner } from '@/server/proof'
 import { isChainKey } from '@/lib/chains'
+import { isEvmAddress } from '@/server/validation'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,7 +25,14 @@ export async function POST(request: NextRequest) {
     if (!body) throw httpError('Malformed request', 400, 'JSON_INVALID')
 
     const { label, owner, signature, displayName } = body as Record<string, string>
-    if (!label) throw httpError('No name given', 400, 'LABEL_MISSING')
+    if (typeof label !== 'string' || !label.trim()) {
+      throw httpError('No name given', 400, 'LABEL_MISSING')
+    }
+    // `claimMessage` lowercases the owner before `requireSigner` gets a chance
+    // to reject one, so the guard has to land here first.
+    if (typeof owner !== 'string' || !isEvmAddress(owner)) {
+      throw httpError('Invalid account address', 400, 'OWNER_INVALID')
+    }
 
     const verified = await requireSigner(claimMessage(label, owner), signature, owner)
 

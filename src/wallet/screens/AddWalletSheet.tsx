@@ -7,11 +7,11 @@
  * sheet primitive itself lives in components/Shell.tsx, so this file is only
  * the two rows and where they go.
  *
- * Both rows land on the same place: the name step. That is the rule SPEC.md
- * sets out — Tangem allows several wallets, one mobile and many cards, and each
- * one is a separate identity, so each one claims its own name rather than
- * sharing the first wallet's. Adding a wallet without naming it is still
- * possible; it takes ticking *Continue without a name* on the step itself.
+ * Both rows create the wallet locally and land on Home. There is deliberately
+ * no name step here: this demo runs one owner key for every wallet, so a
+ * second claim would overwrite the same identity and read back wrong on
+ * reload. Naming belongs to the first wallet's onboarding claim; later wallets
+ * keep their local label.
  *
  * The mobile row is disabled once a mobile wallet exists, because the footnote
  * on the screen behind ("You can only have one mobile wallet") is a real rule
@@ -33,14 +33,13 @@ export function AddWalletSheet({ onClose }: AddWalletSheetProps) {
   const hasMobile = w.wallets.some((wallet) => wallet.kind === 'mobile')
 
   /**
-   * Create the wallet locally, then hand it to the name step. `purpose:
-   * 'rename'` with an explicit walletId is what tells that screen it is naming
-   * this particular wallet and should come back here rather than continuing
-   * into onboarding.
+   * Create the wallet locally and go straight Home — no name step. The claim
+   * writes one owner's name, and a second wallet sharing that key cannot have
+   * its own, so the step is only ever offered for the first wallet.
    */
   const add = (kind: Wallet['kind']) => {
-    const walletId = w.addWallet(kind)
-    w.go({ name: 'nameWallet', purpose: 'rename', walletId })
+    w.addWallet(kind)
+    w.reset({ name: 'home' })
   }
 
   return (

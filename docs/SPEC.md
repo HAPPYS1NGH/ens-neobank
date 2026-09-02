@@ -29,9 +29,10 @@ Four places in the existing UI change:
 | Send | Paste a hex address | Type `alice`, or any ENS name; it resolves per chain |
 | Details → Address book | Contacts stored as hex | Contacts stored as ENS names, resolved live |
 
-**One name, every chain.** The wallet gets one name at creation. Every network the user
-toggles on in *Manage tokens* adds its address to that same name, so a single
-`harpreet.tange.eth` receives BTC, ETH, Base, Optimism, Arbitrum and Solana.
+**One name, every chain.** The wallet gets one name at creation, minted bare — with no
+address records. Every network the user toggles on in *Manage tokens* then writes that
+chain's address onto the same name, so a single `harpreet.tange.eth` gains BTC, ETH, Base,
+Optimism, Arbitrum and Solana as the user enables them.
 
 Rules the UI enforces (deliberate departures from the real app, documented in the README):
 

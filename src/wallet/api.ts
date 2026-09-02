@@ -98,10 +98,9 @@ export interface AvailabilityDTO {
 }
 
 /**
- * The route already inverts the registry's backwards 404-means-free behaviour,
- * so `available` here means what it says. A rejected label (too short,
- * reserved, bad characters) comes back as an ApiError whose message is written
- * for the user — render it verbatim under the field.
+ * `available` is the SDK's availability flag, passed through as-is. A rejected
+ * label (too short, reserved, bad characters) comes back as an ApiError whose
+ * message is written for the user — render it verbatim under the field.
  */
 export async function checkAvailability(label: string): Promise<AvailabilityDTO> {
   return request<AvailabilityDTO>(
