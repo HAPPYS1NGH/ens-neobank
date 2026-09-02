@@ -216,10 +216,14 @@ something you will never get back.
 - **The registry is shared.** The tag keeps this demo's names apart from the other client
   demo already in the parent, but see `cleanup` above: the tag also matches names visitors
   claimed, so it stays a dry run until you name labels.
-- **Two demo simplifications to know before you poke at it.** Only the active wallet's name
-  is re-read from the registry at boot (one owner key, so a second wallet would collide), and
-  Choose account shows the same token count and total on every wallet row because the network
-  list is shared, not per-wallet.
+- **Every wallet is its own owner.** Each wallet in the app carries an account index and
+  derives its own keys from the one stored seed (`src/lib/keys.ts`), so it has its own
+  addresses, its own name and its own network list. Adding a wallet walks into the same name
+  step onboarding uses; skipping it leaves a standing offer on Home, in Choose account and
+  under Details → Wallets. Boot re-reads one name per wallet, each against that wallet's own
+  owner address. Account 0 keeps the pre-multi-wallet derivation, so an existing browser keeps
+  the wallet and name it already had; the legacy shared network list migrates to the wallet
+  that was active when it was built, and to that wallet alone.
 
 ## Screens
 

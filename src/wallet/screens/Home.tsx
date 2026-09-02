@@ -108,35 +108,34 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
             <span className="balance__frac">{balance.fraction}</span>
           </h1>
 
-          {/* The claim prompt is for the first wallet only: every wallet here
-           * shares one owner key, so a second claim would overwrite the same
-           * identity. Later wallets stay on their local label. */}
-          {(w.isNamed || w.wallets[0]?.id !== w.wallet?.id) ? (
-            // The claim, standing exactly where the local label stood. Tapping
-            // it is the way into the choose-account sheet (IMG_4301): the row
-            // that sheet lists is this exact string, so the tap target reads
-            // as "this wallet" rather than an extra control the shot lacks.
+          {/* The title, standing exactly where the local label stood. Tapping
+           * it is the way into the choose-account sheet (IMG_4301): the row
+           * that sheet lists is this exact string, so the tap target reads as
+           * "this wallet" rather than an extra control the shot lacks. It stays
+           * a button whether or not the wallet is named — an unnamed wallet
+           * still has to be able to switch accounts. */}
+          <button
+            className="wallet-name hm-name"
+            title={w.isNamed ? "This wallet's ENS name" : 'Switch wallet'}
+            onClick={() => w.openSheet({ kind: 'chooseAccount' })}
+          >
+            {w.walletTitle}
+            {!w.isNamed && <Cloud size={15} className="hm-cloud" />}
+          </button>
+
+          {/* The prompt shows for ANY unnamed wallet, not just the first one.
+           * Each wallet is its own owner, so each one can claim its own name —
+           * and a wallet that skipped the step during onboarding has to be able
+           * to find its way back to it. */}
+          {!w.isNamed && (
             <button
-              className="wallet-name hm-name"
-              title="This wallet's ENS name"
-              onClick={() => w.openSheet({ kind: 'chooseAccount' })}
+              className="hm-claim"
+              onClick={() =>
+                w.go({ name: 'nameWallet', purpose: 'rename', walletId: w.wallet?.id })
+              }
             >
-              {w.walletTitle}
+              Tap to claim a {w.parent} name for this wallet
             </button>
-          ) : (
-            <>
-              <div className="wallet-name hm-name">
-                {w.walletTitle} <Cloud size={15} className="hm-cloud" />
-              </div>
-              <button
-                className="hm-claim"
-                onClick={() =>
-                  w.go({ name: 'nameWallet', purpose: 'rename', walletId: w.wallet?.id })
-                }
-              >
-                Tap to claim a {w.parent} name
-              </button>
-            </>
           )}
         </div>
 

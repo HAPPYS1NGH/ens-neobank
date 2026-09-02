@@ -7,11 +7,12 @@
  * sheet primitive itself lives in components/Shell.tsx, so this file is only
  * the two rows and where they go.
  *
- * Both rows create the wallet locally and land on Home. There is deliberately
- * no name step here: this demo runs one owner key for every wallet, so a
- * second claim would overwrite the same identity and read back wrong on
- * reload. Naming belongs to the first wallet's onboarding claim; later wallets
- * keep their local label.
+ * Both rows create the wallet locally and then walk into the name step, the
+ * same one first-run onboarding uses. Every wallet derives from its own account
+ * index (src/lib/keys.ts), so it is a separate owner and can hold a name of its
+ * own — a second wallet is not a second label on the first one's identity.
+ * Skipping is still one tick, and an unnamed wallet can be named later from
+ * Home or Details → Wallets.
  *
  * The mobile row is disabled once a mobile wallet exists, because the footnote
  * on the screen behind ("You can only have one mobile wallet") is a real rule
@@ -33,13 +34,14 @@ export function AddWalletSheet({ onClose }: AddWalletSheetProps) {
   const hasMobile = w.wallets.some((wallet) => wallet.kind === 'mobile')
 
   /**
-   * Create the wallet locally and go straight Home — no name step. The claim
-   * writes one owner's name, and a second wallet sharing that key cannot have
-   * its own, so the step is only ever offered for the first wallet.
+   * Create the wallet, then offer it the name step. Home is reset underneath
+   * first so Back from the name step lands on the new wallet's Home rather
+   * than on the Details screen this sheet was opened over.
    */
   const add = (kind: Wallet['kind']) => {
-    w.addWallet(kind)
+    const id = w.addWallet(kind)
     w.reset({ name: 'home' })
+    w.go({ name: 'nameWallet', purpose: 'addWallet', walletId: id })
   }
 
   return (
@@ -53,7 +55,7 @@ export function AddWalletSheet({ onClose }: AddWalletSheetProps) {
           </span>
           <span className="aw-stack">
             <span className="aw-title">Add hardware wallet</span>
-            <span className="aw-sub">Scan a Tangem card to add it</span>
+            <span className="aw-sub">Scan a Tangem card, then claim its name</span>
           </span>
         </button>
 
@@ -66,7 +68,7 @@ export function AddWalletSheet({ onClose }: AddWalletSheetProps) {
             <span className="aw-sub">
               {hasMobile
                 ? 'You already have a mobile wallet on this device'
-                : 'Create a new wallet on this device'}
+                : 'Create a new wallet on this device, then claim its name'}
             </span>
           </span>
         </button>

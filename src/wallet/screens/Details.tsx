@@ -42,6 +42,9 @@ export interface DetailsProps {
 export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
   const w = useWallet()
 
+  /** Wallets still waiting for a name, in list order. */
+  const unnamed = w.wallets.filter((wallet) => wallet.name === null)
+
   /** Nothing behind these rows in this build; say so rather than dead-ending. */
   const notInDemo = (what: string) => () =>
     w.showToast(`${what} is outside this demo — names are the part that is real`)
@@ -126,6 +129,7 @@ export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
                   </span>
                   <span className="dt-row-sub">
                     {wallet.kind === 'mobile' ? 'Mobile Wallet' : 'Hardware Wallet'} &middot; $0.00
+                    {!named && <span className="dt-row-flag"> &middot; no name yet</span>}
                   </span>
                 </span>
                 {!named && (
@@ -145,9 +149,26 @@ export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
             <span className="dt-row-title dt-row-title--accent">Add Wallet</span>
           </button>
 
+          {/* The standing offer for anyone who ticked *Continue without a
+           * name*. It counts rather than naming one wallet, because the row it
+           * points at is right above it. */}
+          {unnamed.length > 0 && (
+            <button
+              className="dt-nudge"
+              onClick={() =>
+                w.go({ name: 'nameWallet', purpose: 'rename', walletId: unnamed[0].id })
+              }
+            >
+              {unnamed.length === 1
+                ? `Get a ${w.parent} name for ${unnamed[0].name?.fullName ?? unnamed[0].label}`
+                : `${unnamed.length} wallets have no name yet — claim one`}
+            </button>
+          )}
+
           <p className="dt-foot">
             You can only have one mobile wallet. Upgrade it to Tangem hardware wallet, or add a new
-            hardware wallet. Each wallet is its own identity, so each one claims its own name.
+            hardware wallet. Each wallet is its own identity with its own addresses, so each one
+            claims — and keeps — its own name.
           </p>
         </div>
 
@@ -370,6 +391,24 @@ const CSS = `
   line-height: 22px;
   text-align: center;
 }
+
+/* The claim offer under the wallets list. Accent-soft so it reads as an offer
+ * rather than a warning; the red dot on the row is the warning. */
+.dt-nudge {
+  display: block;
+  width: calc(100% - 36px);
+  margin: 10px 18px 0;
+  padding: 11px 14px;
+  border-radius: var(--r-icon);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: var(--fw-semibold);
+  text-align: left;
+}
+.dt-nudge:active { opacity: .7; }
+
+.dt-row-flag { color: var(--danger); }
 
 .dt-foot {
   margin: 8px 20px 14px 68px;

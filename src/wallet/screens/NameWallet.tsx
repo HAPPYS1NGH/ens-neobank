@@ -54,12 +54,20 @@ const DEBOUNCE_MS = 400
 export interface NameWalletProps {
   /**
    * `onboarding` — the first wallet, Continue lands on the claim confirmation.
+   * `addWallet` — a wallet just added from Details; same step, said differently
+   *   because the user already has a named wallet and needs to know this is a
+   *   second, separate one rather than a rename of the first.
    * `rename` — Details → a wallet with no name; Back returns where it came from.
    */
-  purpose?: 'onboarding' | 'rename'
+  purpose?: 'onboarding' | 'addWallet' | 'rename'
+  /**
+   * Which wallet is being named. Passed through to the claim so it lands on
+   * this row even if the active wallet changed underneath the screen.
+   */
+  walletId?: string
 }
 
-export function NameWallet({ purpose = 'onboarding' }: NameWalletProps) {
+export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps) {
   const w = useWallet()
 
   const [raw, setRaw] = useState('')
@@ -133,7 +141,7 @@ export function NameWallet({ purpose = 'onboarding' }: NameWalletProps) {
     if (!canClaim || w.busy) return
 
     setClaimError(null)
-    const result = await w.claimName(label)
+    const result = await w.claimName(label, walletId)
     if (result.ok) {
       w.go({ name: 'nameClaimed' })
       return
@@ -153,13 +161,17 @@ export function NameWallet({ purpose = 'onboarding' }: NameWalletProps) {
           setStatus({ kind: 'unknown', message: 'Could not re-check this name' })
         }
       })
-  }, [canClaim, label, skip, w])
+  }, [canClaim, label, skip, w, walletId])
 
   const disabled = skip ? false : !canClaim || w.busy
 
   /* --------------------------------- view --------------------------------- */
 
-  const title = purpose === 'rename' ? 'Name this wallet' : 'Name your wallet'
+  const title = purpose === 'onboarding' ? 'Name your wallet' : 'Name this wallet'
+  const lede =
+    purpose === 'addWallet'
+      ? 'This is a separate wallet with its own addresses, so it gets its own name — the one you already claimed keeps pointing at the wallet you claimed it for.'
+      : 'One name that receives on every network you turn on, instead of a different address for each.'
 
   return (
     <div className="tgn">
@@ -171,10 +183,7 @@ export function NameWallet({ purpose = 'onboarding' }: NameWalletProps) {
 
       <div className="tgn__body scroll">
         <h1 className="title tgn__title">{title}</h1>
-        <p className="tgn__lede">
-          One name that receives on every network you turn on, instead of a different address
-          for each.
-        </p>
+        <p className="tgn__lede">{lede}</p>
 
         <div className="tgn__field" data-state={status.kind} data-skip={skip}>
           <div className="tgn__entry">

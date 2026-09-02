@@ -7,6 +7,11 @@
  * keypair is derived from it, so the same browser always shows the same
  * wallet and a reset genuinely starts over.
  *
+ * Each wallet in the app is its own identity, so each one gets its own account
+ * index and every derivation below takes it. Account 0 keeps the original
+ * purpose strings ('evm', 'btc/0', 'sol/0') so a browser that already holds a
+ * seed keeps the addresses — and the name — its first wallet was minted with.
+ *
  * These are real, well-formed keys and real, well-formed addresses — the
  * Namespace registry validates address format per coin type, so a plausible
  * fake would be rejected. They are NOT for funding: the seed sits in
@@ -72,13 +77,18 @@ function derive(seed: Uint8Array, purpose: string): Uint8Array {
   return sha256(concat(seed, utf8(purpose)))
 }
 
-/** EVM private key, shared by every EVM account in the wallet. */
-export function evmPrivateKey(seed: Uint8Array): `0x${string}` {
-  return `0x${toHex(derive(seed, 'evm'))}`
+/** Account 0 keeps the pre-multi-wallet purpose string; later ones are suffixed. */
+function evmPurpose(account: number): string {
+  return account === 0 ? 'evm' : `evm/${account}`
 }
 
-export function evmAddress(seed: Uint8Array): `0x${string}` {
-  const priv = derive(seed, 'evm')
+/** EVM private key, shared by every EVM chain within one wallet. */
+export function evmPrivateKey(seed: Uint8Array, account = 0): `0x${string}` {
+  return `0x${toHex(derive(seed, evmPurpose(account)))}`
+}
+
+export function evmAddress(seed: Uint8Array, account = 0): `0x${string}` {
+  const priv = derive(seed, evmPurpose(account))
   const pub = secp256k1.getPublicKey(priv, false).slice(1) // strip 0x04 prefix
   const hash = keccak_256(pub)
   return `0x${toHex(hash.slice(-20))}` as `0x${string}`
@@ -100,15 +110,20 @@ export function solAddress(seed: Uint8Array, index = 0): string {
   return base58.encode(pub)
 }
 
-export function addressFor(seed: Uint8Array, chain: ChainKey, index = 0): string {
+/**
+ * The address one wallet receives at on one chain. `account` is the wallet's
+ * own index, so two wallets in the app are two different identities on every
+ * chain rather than one identity wearing two labels.
+ */
+export function addressFor(seed: Uint8Array, chain: ChainKey, account = 0): string {
   switch (chain) {
     case 'btc':
-      return btcAddress(seed, index)
+      return btcAddress(seed, account)
     case 'sol':
-      return solAddress(seed, index)
+      return solAddress(seed, account)
     default:
       // Every EVM chain shares the one address, which is what a real wallet does.
-      return evmAddress(seed)
+      return evmAddress(seed, account)
   }
 }
 
@@ -116,8 +131,12 @@ export function addressFor(seed: Uint8Array, chain: ChainKey, index = 0): string
  * Signs the ownership proof the server checks before it writes a name.
  * Not a session, not SIWE — one message, one signature, verified once.
  */
-export async function signOwnership(seed: Uint8Array, message: string): Promise<`0x${string}`> {
+export async function signOwnership(
+  seed: Uint8Array,
+  message: string,
+  account = 0,
+): Promise<`0x${string}`> {
   const { privateKeyToAccount } = await import('viem/accounts')
-  const account = privateKeyToAccount(evmPrivateKey(seed))
-  return account.signMessage({ message })
+  const signer = privateKeyToAccount(evmPrivateKey(seed, account))
+  return signer.signMessage({ message })
 }

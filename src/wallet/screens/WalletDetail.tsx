@@ -95,10 +95,12 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
    * records are never deleted, so a name can outlive the toggle that made it.
    */
   const chains = useMemo(() => {
-    const wanted = chainsForNetworks(w.enabledNetworkIds)
+    // This wallet's own networks, not the active wallet's — the two are the
+    // same after the effect above runs, but not on the first render.
+    const wanted = chainsForNetworks(wallet?.enabledNetworkIds ?? [])
     const held = read.status === 'ok' ? (Object.keys(read.name.addresses) as ChainKey[]) : []
     return [...wanted, ...held.filter((c) => !wanted.includes(c))]
-  }, [w.enabledNetworkIds, read])
+  }, [wallet, read])
 
   /* ------------------------------------------------------------ the claim */
 
@@ -153,7 +155,7 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
 
   async function claim() {
     setClaimError(null)
-    const result = await w.claimName(label)
+    const result = await w.claimName(label, wallet.id)
     if (result.ok) {
       setDraft('')
       setCheck({ status: 'idle' })

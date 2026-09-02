@@ -10,12 +10,13 @@
  *
  * STATE
  *   w.ready               false until the seed is derived and the name looked up
- *   w.owner               the wallet's EVM address, and the name's owner
+ *   w.owner               the ACTIVE wallet's EVM address, and its name's owner
  *   w.wallets / w.wallet  every wallet; `wallet` is the active one
  *   w.ensName             active wallet's WalletNameDTO, or null if unnamed
  *   w.isNamed             convenience for `ensName !== null`
  *   w.walletTitle         what goes under the balance: the name, else the label
- *   w.enabledNetworkIds   network ids toggled on, in the user's order
+ *   w.unnamedCount        wallets still waiting for a name, for the prompts
+ *   w.enabledNetworkIds   the ACTIVE wallet's network ids, in the user's order
  *   w.tokens              TokenRow[] for the home list, derived from the above
  *   w.total               SIMULATED portfolio total, always 0
  *   w.contacts            address book, stored as ENS names
@@ -33,7 +34,7 @@
  *
  * NAMES  (every one of these is a real write to tange.eth)
  *   await w.checkName(label)      -> { label, available, parentName } | throws ApiError
- *   await w.claimName(label)      -> { ok } | { ok: false, error }
+ *   await w.claimName(label, id?) -> { ok } | { ok: false, error }
  *   w.skipName()                  the user ticked 'Continue without a name'
  *   await w.saveNetworks(ids)     diffs against what is written and adds records,
  *                                 reporting which chains wrote and which failed
@@ -93,6 +94,19 @@ export interface Wallet {
   name: WalletNameDTO | null
   /** 'mobile' for the phone-only wallet, 'hardware' for a card. */
   kind: 'mobile' | 'hardware'
+  /**
+   * This wallet's key derivation index (src/lib/keys.ts). Account 0 is the
+   * first wallet and keeps the original derivation, so an existing browser
+   * keeps the name it already minted. Every later wallet gets its own index,
+   * which is what makes it a separate owner — and therefore separately
+   * nameable — rather than a second label on one identity.
+   */
+  account: number
+  /**
+   * The networks this wallet has turned on, in the user's order. Per wallet,
+   * not global: adding a wallet must not inherit or reset another one's list.
+   */
+  enabledNetworkIds: string[]
 }
 
 export interface Contact {
@@ -107,7 +121,7 @@ export interface Contact {
 export type Screen =
   | { name: 'onboarding' }
   /** The claim. `purpose` decides where Continue lands and what Back means. */
-  | { name: 'nameWallet'; purpose: 'onboarding' | 'rename'; walletId?: string }
+  | { name: 'nameWallet'; purpose: 'onboarding' | 'addWallet' | 'rename'; walletId?: string }
   | { name: 'nameClaimed' }
   | { name: 'home' }
   | { name: 'tokenDetail'; networkId: string }
@@ -137,10 +151,8 @@ interface State {
   ready: boolean
   /** Once true the user is past first-run onboarding, whatever screen is up. */
   onboarded: boolean
-  owner: string
   wallets: Wallet[]
   activeWalletId: string
-  enabledNetworkIds: string[]
   contacts: Contact[]
   screen: Screen
   history: Screen[]
@@ -151,7 +163,8 @@ interface State {
 }
 
 type Action =
-  | { type: 'ready'; owner: string; persisted: Persisted; name: WalletNameDTO | null }
+  /** `names` is keyed by wallet id — every wallet is looked up by its own owner. */
+  | { type: 'ready'; wallets: Wallet[]; persisted: Persisted; names: Record<string, WalletNameDTO | null> }
   /** First-run onboarding is over — claim completed or the user skipped it. */
   | { type: 'onboard' }
   | { type: 'navigate'; screen: Screen }
@@ -163,7 +176,7 @@ type Action =
   | { type: 'addWallet'; wallet: Wallet }
   | { type: 'removeWallet'; walletId: string }
   | { type: 'activateWallet'; walletId: string }
-  | { type: 'setNetworks'; ids: string[] }
+  | { type: 'setNetworks'; walletId: string; ids: string[] }
   | { type: 'addContact'; contact: Contact }
   | { type: 'removeContact'; id: string }
   | { type: 'toast'; message: string | null }
@@ -171,11 +184,18 @@ type Action =
 
 const STORAGE_KEY = 'tangem.demo.state.v1'
 
-/** What survives a reload. The name itself is re-read from the registry. */
+/**
+ * What survives a reload. The name itself is re-read from the registry.
+ *
+ * `enabledNetworkIds` at the top level is the pre-multi-wallet shape: one list
+ * for the whole app. It is still read so an existing install keeps its tokens,
+ * but it is written per wallet from now on (see `migrate` below).
+ */
 interface Persisted {
-  wallets: Array<Pick<Wallet, 'id' | 'label' | 'kind'>>
+  wallets: Array<Pick<Wallet, 'id' | 'label' | 'kind'> & Partial<Pick<Wallet, 'account' | 'enabledNetworkIds'>>>
   activeWalletId: string
-  enabledNetworkIds: string[]
+  /** Legacy, read-only: the single shared list this build replaced. */
+  enabledNetworkIds?: string[]
   contacts: Contact[]
   /** Once true, boot lands on home rather than the create-wallet screen. */
   onboarded: boolean
@@ -183,23 +203,64 @@ interface Persisted {
 
 const DEFAULT_WALLET_ID = 'wallet-1'
 
+// A fresh wallet holds no tokens — the same rule the name mint follows.
+// Nothing appears until the user adds it (Manage tokens or the receive flow).
 const emptyPersisted: Persisted = {
-  wallets: [{ id: DEFAULT_WALLET_ID, label: 'Wallet', kind: 'mobile' }],
+  wallets: [
+    { id: DEFAULT_WALLET_ID, label: 'Wallet', kind: 'mobile', account: 0, enabledNetworkIds: [] },
+  ],
   activeWalletId: DEFAULT_WALLET_ID,
-  // A fresh wallet holds no tokens — the same rule the name mint follows.
-  // Nothing appears until the user adds it (Manage tokens or the receive flow).
-  enabledNetworkIds: [],
   contacts: [],
   onboarded: false,
+}
+
+/**
+ * Turns whatever is in storage into wallets this build can use.
+ *
+ *  - Duplicate ids (a length-based id reused after a delete) keep the first.
+ *  - A wallet with no `account` gets one from its id, so `wallet-1` stays
+ *    account 0 and keeps the addresses — and the name — it already minted.
+ *  - A legacy shared network list goes to the wallet that was active when it
+ *    was built, and to that wallet only. Copying it to every wallet would
+ *    invent balances the other wallets never had.
+ */
+function migrate(persisted: Persisted): Wallet[] {
+  const seen = new Set<string>()
+  const rows = persisted.wallets.filter((w) => (seen.has(w.id) ? false : (seen.add(w.id), true)))
+  const source = rows.length > 0 ? rows : emptyPersisted.wallets
+
+  const takenAccounts = new Set<number>()
+  return source.map((w, index) => {
+    const fromId = Number(w.id.replace('wallet-', '')) - 1
+    let account =
+      typeof w.account === 'number' && Number.isInteger(w.account) && w.account >= 0
+        ? w.account
+        : Number.isInteger(fromId) && fromId >= 0
+          ? fromId
+          : index
+    // Two wallets on one account would be two labels on one identity — the
+    // bug this replaces. Push a collision past everything already claimed.
+    while (takenAccounts.has(account)) account += 1
+    takenAccounts.add(account)
+
+    return {
+      id: w.id,
+      label: w.label,
+      kind: w.kind,
+      name: null,
+      account,
+      enabledNetworkIds:
+        w.enabledNetworkIds ??
+        (w.id === persisted.activeWalletId ? (persisted.enabledNetworkIds ?? []) : []),
+    }
+  })
 }
 
 const initial: State = {
   ready: false,
   onboarded: false,
-  owner: '',
-  wallets: emptyPersisted.wallets.map((w) => ({ ...w, name: null })),
+  wallets: migrate(emptyPersisted),
   activeWalletId: DEFAULT_WALLET_ID,
-  enabledNetworkIds: [],
   contacts: [],
   screen: { name: 'onboarding' },
   history: [],
@@ -212,32 +273,16 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'ready': {
       const { persisted } = action
-      // Storage written before wallet ids were guaranteed unique can hold
-      // duplicates (a length-based id reused after a delete). Keep the first
-      // of each id so React keys stay unique; fall back to a fresh wallet if
-      // nothing usable survived.
-      const seen = new Set<string>()
-      const deduped = persisted.wallets.filter((w) =>
-        seen.has(w.id) ? false : (seen.add(w.id), true),
-      )
-      const wallets = (deduped.length > 0
-        ? deduped
-        : emptyPersisted.wallets.map((w) => ({ ...w }))
-      ).map((w) => ({
-        ...w,
-        // Only the active wallet's name is looked up at boot — the demo has one
-        // owner key, so a second wallet shares it and would collide.
-        name: w.id === persisted.activeWalletId ? action.name : null,
-      }))
+      // Every wallet is looked up by its OWN owner address, so each one shows
+      // the name it actually holds rather than borrowing the first wallet's.
+      const wallets = action.wallets.map((w) => ({ ...w, name: action.names[w.id] ?? null }))
       return {
         ...state,
         ready: true,
-        owner: action.owner,
         wallets,
         activeWalletId: wallets.some((w) => w.id === persisted.activeWalletId)
           ? persisted.activeWalletId
           : wallets[0].id,
-        enabledNetworkIds: persisted.enabledNetworkIds,
         contacts: persisted.contacts,
         onboarded: persisted.onboarded,
         screen: persisted.onboarded ? { name: 'home' } : { name: 'onboarding' },
@@ -297,8 +342,15 @@ function reducer(state: State, action: Action): State {
     }
     case 'activateWallet':
       return { ...state, activeWalletId: action.walletId }
+    // Networks belong to one wallet. Writing them globally is what made a new
+    // wallet inherit another's tokens and then clear them for both.
     case 'setNetworks':
-      return { ...state, enabledNetworkIds: action.ids }
+      return {
+        ...state,
+        wallets: state.wallets.map((w) =>
+          w.id === action.walletId ? { ...w, enabledNetworkIds: action.ids } : w,
+        ),
+      }
     case 'addContact':
       return { ...state, contacts: [...state.contacts, action.contact] }
     case 'removeContact':
@@ -336,10 +388,16 @@ interface Ctx extends State {
   /** The parent every name is issued under: `tange.eth`. Not `tangem.eth`. */
   parent: string
   wallet: Wallet
+  /** The active wallet's EVM address — the owner its name is issued to. */
+  owner: string
   ensName: WalletNameDTO | null
   isNamed: boolean
   /** The string that goes under the balance — the name, or the local label. */
   walletTitle: string
+  /** The active wallet's network ids, in the user's order. */
+  enabledNetworkIds: string[]
+  /** How many wallets are still unnamed — what the Details prompt counts. */
+  unnamedCount: number
 
   addressForChain: (chain: ChainKey) => string
   addressForNetwork: (networkId: string) => string
@@ -357,7 +415,8 @@ interface Ctx extends State {
   showToast: (message: string) => void
 
   checkName: (label: string) => Promise<api.AvailabilityDTO>
-  claimName: (label: string) => Promise<WriteResult>
+  /** Claims for `walletId`, defaulting to the active wallet. */
+  claimName: (label: string, walletId?: string) => Promise<WriteResult>
   skipName: () => void
   saveNetworks: (ids: string[]) => Promise<NetworkWriteResult>
   resolve: (query: string, chain: ChainKey) => Promise<ResolutionDTO>
@@ -365,6 +424,7 @@ interface Ctx extends State {
   addContact: (input: { name: string; note?: string }) => void
   removeContact: (id: string) => void
 
+  /** Creates a wallet with its own account index and activates it. */
   addWallet: (kind: Wallet['kind']) => string
   activateWallet: (id: string) => void
   /** Deletes one wallet locally. The last wallet cannot be deleted. */
@@ -385,7 +445,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const seed = getSeed()
     seedRef.current = seed
-    const owner = evmAddress(seed)
 
     let persisted = emptyPersisted
     try {
@@ -394,18 +453,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch {
       // Corrupt or blocked storage — start clean rather than crash on boot.
     }
+    const wallets = migrate(persisted)
 
     let cancelled = false
-    api
-      .getNameByOwner(owner)
-      .then((name) => {
-        if (!cancelled) dispatch({ type: 'ready', owner, persisted, name })
-      })
-      .catch(() => {
-        // A name lookup failure must not block the wallet. The user sees the
-        // local label until the next reload succeeds.
-        if (!cancelled) dispatch({ type: 'ready', owner, persisted, name: null })
-      })
+    // One lookup per wallet, each against its own owner address. A failure on
+    // any one of them must not block the wallet or lose the others, so each
+    // settles to null on its own and the app shows that wallet's local label
+    // until the next reload succeeds.
+    Promise.all(
+      wallets.map((wallet) =>
+        api
+          .getNameByOwner(evmAddress(seed, wallet.account))
+          .catch(() => null)
+          .then((name) => [wallet.id, name] as const),
+      ),
+    ).then((entries) => {
+      if (cancelled) return
+      dispatch({ type: 'ready', wallets, persisted, names: Object.fromEntries(entries) })
+    })
     return () => {
       cancelled = true
     }
@@ -414,9 +479,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!state.ready) return
     const persisted: Persisted = {
-      wallets: state.wallets.map(({ id, label, kind }) => ({ id, label, kind })),
+      wallets: state.wallets.map(({ id, label, kind, account, enabledNetworkIds }) => ({
+        id,
+        label,
+        kind,
+        account,
+        enabledNetworkIds,
+      })),
       activeWalletId: state.activeWalletId,
-      enabledNetworkIds: state.enabledNetworkIds,
       contacts: state.contacts,
       onboarded: state.onboarded,
     }
@@ -430,7 +500,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     state.onboarded,
     state.wallets,
     state.activeWalletId,
-    state.enabledNetworkIds,
     state.contacts,
   ])
 
@@ -444,11 +513,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const wallet =
       state.wallets.find((w) => w.id === state.activeWalletId) ?? state.wallets[0]
     const ensName = wallet?.name ?? null
+    const enabledNetworkIds = wallet?.enabledNetworkIds ?? []
+    const seedNow = seedRef.current
+    // The active wallet's own address. Every wallet derives from its own
+    // account index, so this is a different owner per wallet — which is what
+    // lets each of them hold a name of its own.
+    const owner = seedNow ? evmAddress(seedNow, wallet?.account ?? 0) : ''
 
     const addressForChain = (chain: ChainKey) => {
       const seed = seedRef.current
       if (!seed) return ''
-      return addressFor(seed, chain, 0)
+      return addressFor(seed, chain, wallet?.account ?? 0)
     }
 
     const addressForNetwork = (networkId: string) => {
@@ -460,7 +535,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return chain ? addressForChain(chain) : addressForChain('eth')
     }
 
-    const tokens = tokenRows(state.enabledNetworkIds, addressForNetwork)
+    const tokens = tokenRows(enabledNetworkIds, addressForNetwork)
 
     /** Chains this name already holds a record for, from the last read. */
     const writtenChains = new Set<ChainKey>(
@@ -470,25 +545,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     async function writeChain(fullName: string, chain: ChainKey): Promise<WalletNameDTO> {
       const seed = seedRef.current
       if (!seed) throw new Error('Wallet is still starting up')
-      const address = addressFor(seed, chain, 0)
-      const signature = await signOwnership(seed, api.addAddressMessage(fullName, chain, address))
-      return api.addAddress({ fullName, chain, address, owner: state.owner, signature })
+      const account = wallet?.account ?? 0
+      const address = addressFor(seed, chain, account)
+      const signature = await signOwnership(
+        seed,
+        api.addAddressMessage(fullName, chain, address),
+        account,
+      )
+      return api.addAddress({ fullName, chain, address, owner, signature })
     }
 
     return {
       ...state,
       parent: DISPLAY_PARENT,
       wallet,
+      owner,
       ensName,
       isNamed: ensName !== null,
       walletTitle: ensName?.fullName ?? wallet?.label ?? 'Wallet',
+      enabledNetworkIds,
+      unnamedCount: state.wallets.filter((w) => w.name === null).length,
 
       addressForChain,
       addressForNetwork,
 
       tokens,
       total: portfolioTotal(tokens),
-      enabled: new Set(state.enabledNetworkIds),
+      enabled: new Set(enabledNetworkIds),
 
       go: (screen) => dispatch({ type: 'navigate', screen }),
       back: () => dispatch({ type: 'back' }),
@@ -508,22 +591,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
        * If the mint fails nothing is stored locally either, so a retry starts
        * from the same place.
        */
-      async claimName(label: string): Promise<WriteResult> {
+      async claimName(label: string, walletId?: string): Promise<WriteResult> {
         const seed = seedRef.current
         if (!seed) return { ok: false, error: 'Wallet is still starting up' }
-        if (!wallet) return { ok: false, error: 'No wallet selected' }
+        // Claiming names a specific wallet. It defaults to the active one, but
+        // a caller that knows which row it is naming says so, so a claim can
+        // never land on a wallet the user has since switched away from.
+        const target = walletId
+          ? (state.wallets.find((w) => w.id === walletId) ?? wallet)
+          : wallet
+        if (!target) return { ok: false, error: 'No wallet selected' }
+        const targetOwner = evmAddress(seed, target.account)
 
         dispatch({ type: 'busy', busy: true })
         try {
-          const signature = await signOwnership(seed, api.claimMessage(label, state.owner))
+          const signature = await signOwnership(
+            seed,
+            api.claimMessage(label, targetOwner),
+            target.account,
+          )
           const name = await api.mintName({
             label,
-            owner: state.owner,
+            owner: targetOwner,
             signature,
             displayName: label,
           })
 
-          dispatch({ type: 'setName', walletId: wallet.id, name })
+          dispatch({ type: 'setName', walletId: target.id, name })
           // The claim is what ends first-run onboarding, even if the user
           // never reaches the confirmation screen.
           dispatch({ type: 'onboard' })
@@ -555,7 +649,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
        * The README says so out loud.
        */
       async saveNetworks(ids: string[]): Promise<NetworkWriteResult> {
-        dispatch({ type: 'setNetworks', ids })
+        if (!wallet) return { ok: true, written: [], failed: [] }
+        dispatch({ type: 'setNetworks', walletId: wallet.id, ids })
         if (!ensName) return { ok: true, written: [], failed: [] }
 
         const needed = chainsForNetworks(ids).filter((c) => !writtenChains.has(c))
@@ -611,9 +706,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             0,
           ) + 1
         const id = `wallet-${next}`
+        // Same rule for the account index: past the highest in use, never the
+        // list length, or a delete would hand a new wallet the identity — and
+        // the name — of one that came before it.
+        const account = state.wallets.reduce((max, x) => Math.max(max, x.account), -1) + 1
         dispatch({
           type: 'addWallet',
-          wallet: { id, label: `Wallet ${state.wallets.length + 1}`, name: null, kind },
+          wallet: {
+            id,
+            label: `Wallet ${next}`,
+            name: null,
+            kind,
+            account,
+            // A new wallet starts empty. It neither inherits another wallet's
+            // networks nor clears them.
+            enabledNetworkIds: [],
+          },
         })
         return id
       },
@@ -621,9 +729,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       // Deleting a wallet is local: the identity, its enabled networks and its
       // name record here. The name itself is a real subname on the registry and
-      // stays there — deletion does not (and cannot) unwind it. This demo runs
-      // one owner key for every wallet, so a name the deleted wallet held can
-      // resurface on the next boot; the delete note on WalletDetail says so.
+      // stays there — deletion does not (and cannot) unwind it. The account
+      // index is never reused, so a deleted wallet's name does not resurface on
+      // a later one; it simply has no wallet in this app any more.
       removeWallet: (id) => dispatch({ type: 'removeWallet', walletId: id }),
 
       resetWallet: () => {

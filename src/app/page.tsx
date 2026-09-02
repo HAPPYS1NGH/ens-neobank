@@ -52,7 +52,7 @@ function ScreenRouter() {
     case 'onboarding':
       return <Onboarding />
     case 'nameWallet':
-      return <NameWallet purpose={screen.purpose} />
+      return <NameWallet purpose={screen.purpose} walletId={screen.walletId} />
     case 'nameClaimed':
       return <NameClaimed />
     case 'home':
