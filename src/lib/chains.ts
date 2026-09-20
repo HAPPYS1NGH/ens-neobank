@@ -6,15 +6,15 @@
  * coin lives on, each with its own toggle (`IMG_4303`, `IMG_4304`,
  * `IMG_4305`). So this file has two layers:
  *
- *   COINS      the eleven rows of Manage tokens, in Tangem's order
+ *   COINS      the eleven rows of Organize tokens, in Tangem's order
  *   NETWORKS   every toggle under them, writable or not
  *
- * Only some of those networks can be written to the registry. The rest stay
- * VISIBLE, with `writable: false` and a `reason` string the UI renders, because
- * hiding them would misrepresent what the integration covers. `ChainKey` is the
- * writable set and nothing else — `src/server/namespace.ts` maps a `ChainKey`
- * straight onto the SDK's `ChainName` enum, so every key here must be a literal
- * `ChainName` value or the write fails closed at runtime.
+ * Only some of those networks can be written to the registry. Add chain and
+ * Organize tokens list the writable set. Unwritable chains (XRP, TRON, …)
+ * stay in this file so the taxonomy is complete, but they are not offered as
+ * toggles. `ChainKey` is the writable set and nothing else — `src/server/namespace.ts`
+ * maps a `ChainKey` straight onto the SDK's `ChainName` enum, so every key here
+ * must be a literal `ChainName` value or the write fails closed at runtime.
  *
  * Four things carried over from the D'CENT build, all verified against a live
  * name. Do not delete them:
@@ -33,7 +33,7 @@
  *
  * 3. XRP cannot be written. The registry rejects coin type 144 outright
  *    ("addresses.5.coin is not a valid coin"). This is not an SDK gap and no
- *    client-side workaround exists. XRP stays in the list, unwritable, honest.
+ *    client-side workaround exists. XRP is not offered as a toggle.
  *
  * 4. The ENSIP-11 number for any EVM chain is `2147483648 + chainId`. Every
  *    `publicCoin` below follows it; the three non-EVM chains do not.
@@ -277,14 +277,17 @@ export function networksForCoin(coinId: CoinId): NetworkSpec[] {
   return NETWORKS.filter((n) => n.coinId === coinId)
 }
 
+export function writableNetworksForCoin(coinId: CoinId): NetworkSpec[] {
+  return networksForCoin(coinId).filter((n) => n.writable)
+}
+
 export function networkById(id: string): NetworkSpec | undefined {
   return NETWORK_BY_ID[id]
 }
 
 /**
- * True when every network under a coin is unwritable. The Manage tokens rows
- * for these coins carry the explanation at coin level rather than repeating it
- * on each toggle.
+ * True when every network under a coin is unwritable. Organize tokens drops
+ * these coins rather than showing a row that cannot be turned on.
  */
 export function coinIsUnsupported(coinId: CoinId): boolean {
   return networksForCoin(coinId).every((n) => !n.writable)

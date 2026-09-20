@@ -22,6 +22,8 @@
  */
 
 import {
+  createContext,
+  useContext,
   useEffect,
   useLayoutEffect,
   useState,
@@ -29,6 +31,28 @@ import {
   type ReactNode,
 } from 'react'
 import { Close } from './Icons'
+
+/** Overlay + sheet share these. Exit is ~28% faster than enter. */
+export const SHEET_ENTER_MS = 250
+export const SHEET_EXIT_MS = 180
+export const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)'
+
+const SheetOpenContext = createContext(true)
+
+/**
+ * Tells the painted sheet whether the store still wants it open. The host
+ * (page.tsx) keeps the tree mounted after `kind === 'none'` so this can go
+ * false and the CSS transition can run — the store itself is unchanged.
+ */
+export function SheetPresence({
+  open,
+  children,
+}: {
+  open: boolean
+  children: ReactNode
+}) {
+  return <SheetOpenContext.Provider value={open}>{children}</SheetOpenContext.Provider>
+}
 
 /** The screen, in points. Everything else is measured against these. */
 export const SCREEN_WIDTH = 440
@@ -228,8 +252,39 @@ export function Sheet({
   /** Take the full height a sheet is allowed rather than hugging its content. */
   full?: boolean
 }) {
+  const hostOpen = useContext(SheetOpenContext)
+  const [entered, setEntered] = useState(false)
+
+  // Two frames so the closed styles paint before `data-open`; otherwise the
+  // transition has nothing to interpolate. Reduced motion skips the wait so
+  // the sheet is never caught at opacity 0.
+  useLayoutEffect(() => {
+    if (!hostOpen) {
+      setEntered(false)
+      return
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setEntered(true)
+      return
+    }
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setEntered(true))
+    })
+    return () => {
+      cancelAnimationFrame(outer)
+      cancelAnimationFrame(inner)
+    }
+  }, [hostOpen])
+
+  const open = hostOpen && entered
+
   return (
-    <div className="tg-sheet-layer">
+    <div
+      className="tg-sheet-layer"
+      data-open={open || undefined}
+      data-closing={hostOpen ? undefined : ''}
+    >
       <Scrim onClick={onClose} />
       <div
         className={`tg-sheet${plain ? ' tg-sheet--plain' : ''}${full ? ' tg-sheet--full' : ''}`}
@@ -377,14 +432,20 @@ const SHELL_CSS = `
   position: absolute;
   inset: 0;
   z-index: 50;
+  --tg-sheet-dur: ${SHEET_ENTER_MS}ms;
+  --tg-sheet-ease: ${SHEET_EASE};
 }
+.tg-sheet-layer[data-closing] { --tg-sheet-dur: ${SHEET_EXIT_MS}ms; }
 
 .tg-scrim {
   position: absolute;
   inset: 0;
   background: var(--scrim);
-  animation: tg-fade .22s ease;
+  opacity: 0;
+  transition: opacity var(--tg-sheet-dur) var(--tg-sheet-ease);
+  will-change: transform;
 }
+.tg-sheet-layer[data-open] .tg-scrim { opacity: 1; }
 
 .tg-sheet {
   position: absolute;
@@ -397,7 +458,18 @@ const SHELL_CSS = `
   border-radius: var(--r-sheet);
   background: var(--bg-sheet);
   box-shadow: var(--shadow-sheet);
-  animation: tg-rise .26s cubic-bezier(.22, .8, .3, 1);
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity var(--tg-sheet-dur) var(--tg-sheet-ease),
+              transform var(--tg-sheet-dur) var(--tg-sheet-ease);
+  will-change: transform;
+}
+.tg-sheet-layer[data-open] .tg-sheet {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tg-sheet-layer[data-closing] .tg-sheet {
+  transform: translateY(12px);
 }
 
 .tg-sheet--plain { background: var(--bg-sheet-plain); }
@@ -430,9 +502,10 @@ const SHELL_CSS = `
   color: var(--text-1);
   display: grid;
   place-items: center;
+  transition: transform 150ms ${SHEET_EASE};
 }
 
-.tg-sheet__close:active { opacity: .7; }
+.tg-sheet__close:active { transform: scale(0.96); }
 
 .tg-sheet__body {
   flex: 1;
@@ -446,7 +519,4 @@ const SHELL_CSS = `
   flex: none;
   padding: 12px var(--pad-sheet-card) 16px;
 }
-
-@keyframes tg-fade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes tg-rise { from { transform: translateY(24px); opacity: .4 } to { transform: none; opacity: 1 } }
 `

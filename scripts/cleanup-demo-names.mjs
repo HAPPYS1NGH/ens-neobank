@@ -10,7 +10,7 @@
  *   node scripts/cleanup-demo-names.mjs --apply demo123 # delete just that one
  *   node scripts/cleanup-demo-names.mjs --apply --all   # delete every tagged name
  */
-import { readFileSync } from 'node:fs'
+const DEMO_TAG = 'ninza-kit' // must match brand.demoTag in src/config/brands.ts
 
 const env = Object.fromEntries(
   readFileSync('.env.local', 'utf8').split('\n').filter(Boolean).map((line) => {
@@ -33,9 +33,9 @@ const res = await fetch(`${BASE}/api/v1/subnames/search`, {
   body: JSON.stringify({ parentName: PARENT, size: 200 }),
 })
 const { items = [] } = await res.json()
-const tagged = items.filter((i) => i.metadata?.demo === 'tangem-ios')
+const tagged = items.filter((i) => i.metadata?.demo === DEMO_TAG)
 
-console.log(`registry holds ${items.length} names; ${tagged.length} tagged tangem-ios`)
+console.log(`registry holds ${items.length} names; ${tagged.length} tagged ${DEMO_TAG}`)
 for (const item of tagged) console.log(`  ${item.fullName}`)
 
 if (!apply) {

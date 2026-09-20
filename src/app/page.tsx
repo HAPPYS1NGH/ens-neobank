@@ -19,9 +19,9 @@
  * handoff runs through the contact pills Send renders from `w.contacts`.
  */
 
-import { useEffect, useRef } from 'react'
-import { WalletProvider, useWallet } from '@/wallet/store'
-import { Shell } from '@/wallet/components/Shell'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { WalletProvider, useWallet, type Sheet } from '@/wallet/store'
+import { Shell, SheetPresence, SHEET_EXIT_MS } from '@/wallet/components/Shell'
 import { Onboarding } from '@/wallet/screens/Onboarding'
 import { NameWallet } from '@/wallet/screens/NameWallet'
 import { NameClaimed } from '@/wallet/screens/NameClaimed'
@@ -87,10 +87,11 @@ function ScreenRouter() {
 
 /* ------------------------------------------------------------------- sheets */
 
-function SheetRouter() {
-  const w = useWallet()
-  const sheet = w.sheet
+function reduceMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
+function sheetTree(sheet: Sheet) {
   switch (sheet.kind) {
     case 'none':
       return null
@@ -115,6 +116,43 @@ function SheetRouter() {
   }
 }
 
+/**
+ * Store `sheet` goes to `none` on close. Keep the last tree mounted until the
+ * exit transition finishes so an in-flight open can reverse. Nothing in the
+ * store changes. Toast `data-raised` keys off this painted sheet, not the
+ * store, so a toast stays above Save while the sheet is still leaving.
+ */
+function OverlayHost() {
+  const w = useWallet()
+  const live = w.sheet
+  const [painted, setPainted] = useState(live)
+  const [open, setOpen] = useState(live.kind !== 'none')
+  const paintedRef = useRef(painted)
+  paintedRef.current = painted
+
+  useLayoutEffect(() => {
+    if (live.kind !== 'none') {
+      setPainted(live)
+      setOpen(true)
+      return
+    }
+    setOpen(false)
+    if (paintedRef.current.kind === 'none') return
+    const ms = reduceMotion() ? 0 : SHEET_EXIT_MS
+    const timer = window.setTimeout(() => setPainted({ kind: 'none' }), ms)
+    return () => window.clearTimeout(timer)
+  }, [live])
+
+  return (
+    <>
+      {painted.kind !== 'none' && (
+        <SheetPresence open={open}>{sheetTree(painted)}</SheetPresence>
+      )}
+      <ToastLayer raised={painted.kind !== 'none'} />
+    </>
+  )
+}
+
 /* ------------------------------------------------------------------- toast */
 
 /**
@@ -122,12 +160,56 @@ function SheetRouter() {
  * pill above the home indicator, over whatever screen and sheet are up —
  * several flows (Buy, Scan, add-wallet save) speak entirely through it.
  */
-function ToastLayer() {
+const TOAST_EXIT_MS = 160
+
+function ToastLayer({ raised }: { raised: boolean }) {
   const w = useWallet()
-  if (!w.toast) return null
+  const live = w.toast
+  const [text, setText] = useState<string | null>(live)
+  const [open, setOpen] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const holding = useRef(false)
+
+  useLayoutEffect(() => {
+    if (live) {
+      holding.current = true
+      setText(live)
+      setClosing(false)
+      if (reduceMotion()) {
+        setOpen(true)
+        return
+      }
+      let inner = 0
+      const outer = requestAnimationFrame(() => {
+        inner = requestAnimationFrame(() => setOpen(true))
+      })
+      return () => {
+        cancelAnimationFrame(outer)
+        cancelAnimationFrame(inner)
+      }
+    }
+    setOpen(false)
+    if (!holding.current) return
+    setClosing(true)
+    const ms = reduceMotion() ? 0 : TOAST_EXIT_MS
+    const timer = window.setTimeout(() => {
+      holding.current = false
+      setText(null)
+      setClosing(false)
+    }, ms)
+    return () => window.clearTimeout(timer)
+  }, [live])
+
+  if (!text) return null
   return (
-    <div className="tgx-toast-layer" role="status">
-      <p className="tgx-toast">{w.toast}</p>
+    <div
+      className="tgx-toast-layer"
+      data-raised={raised || undefined}
+      data-open={open || undefined}
+      data-closing={closing || undefined}
+      role="status"
+    >
+      <p className="tgx-toast">{text}</p>
     </div>
   )
 }
@@ -174,8 +256,7 @@ function App() {
       {w.ready ? (
         <>
           <ScreenRouter />
-          <SheetRouter />
-          <ToastLayer />
+          <OverlayHost />
         </>
       ) : (
         <Boot />
@@ -218,7 +299,26 @@ const APP_CSS = `
   /* Above a sheet (z 50) but below the status bar trim. */
   z-index: 55;
   pointer-events: none;
-  animation: tgx-rise .22s cubic-bezier(.22, .8, .3, 1);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 220ms cubic-bezier(0.32, 0.72, 0, 1),
+              transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+.tgx-toast-layer[data-open] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.tgx-toast-layer[data-closing] {
+  opacity: 0;
+  transform: translateY(8px);
+  transition-duration: 160ms;
+}
+
+/* Sheet Save sits ~36px from the screen bottom plus a 46px button. Lift the
+ * toast just above that band so the two never share a row. */
+.tgx-toast-layer[data-raised] {
+  bottom: 118px;
 }
 
 .tgx-toast {
@@ -231,10 +331,5 @@ const APP_CSS = `
   line-height: 1.35;
   text-align: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
-}
-
-@keyframes tgx-rise {
-  from { transform: translateY(12px); opacity: 0 }
-  to { transform: none; opacity: 1 }
 }
 `

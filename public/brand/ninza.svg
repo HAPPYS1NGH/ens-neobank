@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+  <!-- Condensed N. Fills the 22px header slot the way the punched card did. -->
+  <path
+    fill="#1E1E1E"
+    d="M4 3.5h8.15L21.7 19.6V3.5H28v25h-8.15L10.3 12.4v16.1H4v-25z"
+  />
+</svg>

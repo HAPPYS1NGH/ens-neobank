@@ -31,9 +31,11 @@
  */
 
 import { useState } from 'react'
+import { toastNotInDemo } from '@/config/copy'
 import { useWallet } from '../store'
 import { splitUsd, percentChange, price, tokenAmount, usd } from '../../lib/format'
 import { NetworkMark } from '../components/CoinMark'
+import { BrandMark } from '../components/BrandMark'
 import {
   ArrowDown,
   ArrowUp,
@@ -61,21 +63,24 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
   const balance = splitUsd(w.total)
 
   /** Every action that has no screen in this build says so, rather than dying. */
-  const notInDemo = (what: string) => () =>
-    w.showToast(`${what} is outside this demo — names are the part that is real`)
+  const notInDemo = (what: string) => () => w.showToast(toastNotInDemo(what))
 
   const scan = onScan ?? notInDemo('Scanning')
   const swap = onSwap ?? notInDemo('Swap')
-  // Add funds, the promo card and the dock search all land in the same token
-  // picker in receive mode — this build receives; buying is out of scope.
-  const search = onSearch ?? (() => w.openSheet({ kind: 'chooseToken', purpose: 'receive' }))
+  // An empty wallet has nothing to receive on. Add funds, the promo card and
+  // the dock search all go to Add chain in that case; once a chain is on they
+  // open the token picker in receive mode.
+  const search =
+    onSearch ??
+    (() =>
+      w.tokens.length === 0
+        ? w.openSheet({ kind: 'addNetwork' })
+        : w.openSheet({ kind: 'chooseToken', purpose: 'receive' }))
 
-  // The Transfer sheet is per-asset; with nothing in the list there is no asset
-  // to open it for, so the tap says so instead of dead-ending.
   const transfer = () => {
     const first = w.tokens[0]
     if (first) w.openSheet({ kind: 'transfer', networkId: first.networkId })
-    else notInDemo('Transfer')()
+    else w.openSheet({ kind: 'addNetwork' })
   }
 
   return (
@@ -84,7 +89,7 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
 
       {/* ------------------------------------------------------- top bar */}
       <header className="hm-top">
-        <TangemMarkBrand />
+        <BrandMark size={22} className="hm-mark" />
         <div className="hm-top__actions">
           <button className="hm-top__btn" onClick={scan} aria-label="Scan">
             <Scan size={23} />
@@ -169,37 +174,51 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
 
         {/* -------------------------------------------------- token list */}
         <div className="page-pad">
-          <div className="card">
-            {w.tokens.map((row) => {
-              const change = percentChange(row.change24h)
-              return (
-                <button
-                  key={row.networkId}
-                  className="hm-token"
-                  onClick={() => w.go({ name: 'tokenDetail', networkId: row.networkId })}
-                >
-                  <NetworkMark networkId={row.networkId} size={39} label={row.name} />
-                  <span className="hm-token__main">
-                    <span className="hm-token__name">{row.name}</span>
-                    <span className="hm-token__quote">
-                      {price(row.price)}
-                      {change.direction !== 'flat' && (
-                        <span className="delta" data-dir={change.direction}>
-                          {' '}
-                          <span className="hm-arrow">{change.direction === 'up' ? '▲' : '▼'}</span>{' '}
-                          {change.text}
-                        </span>
-                      )}
+          {w.tokens.length === 0 ? (
+            <div className="card hm-empty">
+              <p className="hm-empty__title">No chains yet</p>
+              <p className="hm-empty__body">Add a chain to receive at your name.</p>
+              <button
+                type="button"
+                className="btn btn--primary hm-empty__cta"
+                onClick={() => w.openSheet({ kind: 'addNetwork' })}
+              >
+                Add chain
+              </button>
+            </div>
+          ) : (
+            <div className="card">
+              {w.tokens.map((row) => {
+                const change = percentChange(row.change24h)
+                return (
+                  <button
+                    key={row.networkId}
+                    className="hm-token"
+                    onClick={() => w.go({ name: 'tokenDetail', networkId: row.networkId })}
+                  >
+                    <NetworkMark networkId={row.networkId} size={39} label={row.name} />
+                    <span className="hm-token__main">
+                      <span className="hm-token__name">{row.name}</span>
+                      <span className="hm-token__quote">
+                        {price(row.price)}
+                        {change.direction !== 'flat' && (
+                          <span className="delta" data-dir={change.direction}>
+                            {' '}
+                            <span className="hm-arrow">{change.direction === 'up' ? '▲' : '▼'}</span>{' '}
+                            {change.text}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span className="hm-token__right">
-                    <span className="hm-token__fiat">{usd(row.fiat)}</span>
-                    <span className="hm-token__amount">{tokenAmount(row.balance, row.ticker)}</span>
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+                    <span className="hm-token__right">
+                      <span className="hm-token__fiat">{usd(row.fiat)}</span>
+                      <span className="hm-token__amount">{tokenAmount(row.balance, row.ticker)}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* -------------------------------------------------- add & manage */}
@@ -211,16 +230,16 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
         </div>
 
         {/* -------------------------------------------------- coach mark */}
-        {coachVisible && (
+        {coachVisible && w.tokens.length === 0 && (
           <div className="page-pad">
             <div className="hm-coach">
               <span className="hm-coach__icon">
                 <Plus size={16} />
               </span>
               <div className="hm-coach__main">
-                <div className="hm-coach__title">Add tokens</div>
+                <div className="hm-coach__title">Add chain</div>
                 <p className="hm-coach__body">
-                  Pull this up or tap the search bar to receive crypto at your name
+                  Tap Add funds to write a network onto your name
                 </p>
               </div>
               <button
@@ -247,29 +266,6 @@ export function Home({ onScan, onSwap, onSearch }: HomeProps) {
         </div>
       </footer>
     </div>
-  )
-}
-
-/**
- * The header mark. `public/brand/tangem-mark.svg` carries the official media-kit
- * geometry with `fill: currentColor`, so its three paths are inlined here rather
- * than pulling in the simplified stand-in from Icons.tsx.
- */
-function TangemMarkBrand() {
-  return (
-    <svg
-      width={17}
-      height={21}
-      viewBox="0 0 104 130"
-      fill="currentColor"
-      role="img"
-      aria-label="Tangem"
-      className="hm-mark"
-    >
-      <path d="m79.35,0H24.65c-8.63,0-12.94,0-16.24,1.68-2.9,1.48-5.26,3.83-6.73,6.73-1.68,3.3-1.68,7.61-1.68,16.24v9.35h104v-9.35c0-8.63,0-12.94-1.68-16.24-1.48-2.9-3.83-5.26-6.73-6.73-3.3-1.68-7.61-1.68-16.24-1.68Z" />
-      <path d="m69.33,62h34.67v43.35c0,8.63,0,12.94-1.68,16.24-1.48,2.9-3.83,5.26-6.73,6.73-3.3,1.68-7.61,1.68-16.24,1.68h-10.01V62Z" />
-      <path d="m34.67,62H0v43.35c0,8.63,0,12.94,1.68,16.24,1.48,2.9,3.83,5.26,6.73,6.73,3.3,1.68,7.61,1.68,16.24,1.68h10.01V62Z" />
-    </svg>
   )
 }
 
@@ -482,6 +478,34 @@ const CSS = `
 .hm-promo__btn:active { opacity: .7; }
 
 /* Token list ------------------------------------------------------------- */
+
+.hm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 20px 24px;
+}
+
+.hm-empty__title {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--text-1);
+}
+
+.hm-empty__body {
+  margin-top: 6px;
+  font-size: var(--fs-sub);
+  line-height: var(--lh-body);
+  color: var(--text-3);
+}
+
+.hm-empty__cta {
+  margin-top: 18px;
+  width: auto;
+  min-width: 160px;
+  padding: 0 22px;
+}
 
 .hm-token {
   display: flex;

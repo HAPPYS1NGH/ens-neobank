@@ -4,6 +4,7 @@ import {
   type AddressRecord,
   type TextRecord,
 } from '@thenamespace/offchain-manager'
+import { brand } from '@config'
 import { createNamespaceClient, getServerConfig } from './config'
 import { httpError } from './http'
 import { CHAINS, chainByCoin, type ChainKey } from '@/lib/chains'
@@ -25,7 +26,8 @@ import { normalizeLabel, validateLabel } from './validation'
 const EVM_DEFAULT_COIN = 2147483648
 
 export const DEMO_TAG_KEY = 'demo'
-export const DEMO_TAG_VALUE = 'tangem-ios'
+/** From `brand.demoTag` in app.config.ts. Change the preset, not this line. */
+export const DEMO_TAG_VALUE = brand.demoTag
 
 export interface WalletName {
   /** Real, fully-qualified name as written, e.g. `harpreet.àlias.eth`. */

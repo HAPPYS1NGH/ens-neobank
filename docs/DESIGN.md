@@ -1,4 +1,13 @@
-# Design audit — Tangem iOS 6.2
+# Design audit — reference skin
+
+Colour is **not** owned by this file any more. Live colour comes from
+`brand.colors` in `src/config/brands.ts`, injected by the layout. What follows
+is the geometry receipt for the reference skin (sampled from Tangem iOS 6.2).
+When you restyle to a new app, keep the structure of this document and replace
+the samples with the new app's pixels. Do not copy these hex values into a
+screen.
+
+# Design audit — Tangem iOS 6.2 (geometry source)
 
 Every number in `src/app/globals.css` came from a pixel in `reference/screens/`.
 This file is the receipt: the value, the image it came from, and the coordinate.

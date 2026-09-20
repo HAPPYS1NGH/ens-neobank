@@ -7,21 +7,16 @@
  * This screen is where the demo's argument lands. Tangem's toggle adds a local
  * account; here, toggling a network on and hitting Save writes that chain's
  * address record onto the wallet's subname through the add-address route — so
- * `harpreet.tange.eth` genuinely gains a chain. The screen therefore shows the
+ * `happy.ninza.eth` genuinely gains a chain. The screen therefore shows the
  * write happening: a per-row pending state while the record is in flight, and
  * a per-row result once the registry confirms it.
  *
- * Two honesty rules shape the row layout:
- *
- *  - Unwritable networks (XRP, TRON, the L2s the registry has no entry for)
- *    stay in the list with their `reason` rendered under the row. Hiding them
- *    would misrepresent what the integration covers. Their toggles render
- *    disabled and dimmed, so a switch that cannot be flipped never looks like
- *    one that is merely off.
- *  - Toggling a network OFF does not delete its record — `saveNetworks` in the
- *    store only ever adds. When a row with a live record is switched off, the
- *    caption under it says the record stays on the name, rather than letting
- *    the toggle imply a deletion that never happens.
+ * Only networks the offchain name can hold are listed. Chains the registry
+ * cannot write (XRP, TRON, Beacon, Hyperliquid, …) stay out of this sheet;
+ * Add chain is the same writable set. Toggling a network OFF does not delete
+ * its record — `saveNetworks` in the store only ever adds. When a row with a
+ * live record is switched off, the caption under it says the record stays on
+ * the name, rather than letting the toggle imply a deletion that never happens.
  *
  * The Save button is the real commit point: nothing is written until it is
  * pressed, which is also why the draft lives in local state rather than being
@@ -36,9 +31,9 @@ import { useWallet } from '../store'
 import {
   CHAIN_BY_KEY,
   COINS,
-  NETWORK_BY_ID,
   chainsForNetworks,
-  networksForCoin,
+  coinIsUnsupported,
+  writableNetworksForCoin,
   type ChainKey,
   type CoinId,
   type NetworkSpec,
@@ -90,12 +85,13 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
    * open — hunting for a chain by name is useless if it stays folded. */
   const q = query.trim().toLowerCase()
   const visibleCoins = useMemo(() => {
-    if (!q) return COINS
-    return COINS.filter(
+    const writable = COINS.filter((c) => !coinIsUnsupported(c.id))
+    if (!q) return writable
+    return writable.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.ticker.toLowerCase().includes(q) ||
-        networksForCoin(c.id).some(
+        writableNetworksForCoin(c.id).some(
           (n) => n.title.toLowerCase().includes(q) || n.network.toLowerCase().includes(q),
         ),
     )
@@ -167,9 +163,6 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
   }
 
   const noteFor = (network: NetworkSpec): Note | null => {
-    if (!network.writable) {
-      return network.reason ? { text: network.reason, tone: 'muted' } : null
-    }
     if (network.chain && saving && pendingChains.has(network.chain) && fullName) {
       return { text: `Writing the address to ${fullName}…`, tone: 'muted' }
     }
@@ -201,7 +194,7 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
 
   return (
     <Sheet
-      title="Manage tokens"
+      title="Organize tokens"
       onClose={close}
       full
       footer={
@@ -244,7 +237,7 @@ export function ManageTokens({ onClose }: ManageTokensProps) {
 
       <div className="card mt-coins">
         {visibleCoins.map((coin) => {
-          const networks = networksForCoin(coin.id)
+          const networks = writableNetworksForCoin(coin.id)
           const open = q.length > 0 || expanded.has(coin.id)
           // Greyscale until the coin is actually in the portfolio — measured
           // off IMG_4302, where Tether/BNB/USDC/TRON all sample monochrome.

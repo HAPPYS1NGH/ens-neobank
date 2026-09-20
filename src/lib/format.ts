@@ -137,12 +137,34 @@ export function normalizeLabelPreview(raw: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-/** `harpreet` + `tange.eth` → `harpreet.tange.eth`. */
+/** `happy` + `ninza.eth` → `happy.ninza.eth`. */
 export function fullNameFor(label: string, parent: string): string {
   return `${label}.${parent}`
 }
 
-/** `harpreet.tange.eth` → `harpreet`. */
+/**
+ * Keep in lockstep with `LABEL_MIN` / `LABEL_MAX` in src/server/validation.ts.
+ * The name field uses this so a two-letter label never round-trips to a 400.
+ */
+export const LABEL_MIN = 3
+export const LABEL_MAX = 20
+
+/** Why this preview label would be rejected. `null` means it is well-formed. */
+export function labelPreviewIssue(label: string): string | null {
+  if (!label) return null
+  if (label.length < LABEL_MIN) {
+    return `Name must be at least ${LABEL_MIN} characters`
+  }
+  if (label.length > LABEL_MAX) {
+    return `Name must be ${LABEL_MAX} characters or fewer`
+  }
+  if (label.startsWith('-') || label.endsWith('-')) {
+    return 'Name cannot start or end with a hyphen'
+  }
+  return null
+}
+
+/** `happy.ninza.eth` → `happy`. */
 export function labelOf(fullName: string): string {
   return fullName.split('.')[0] ?? fullName
 }

@@ -1,7 +1,8 @@
 import { chromium } from 'playwright'
 
 const OUT = new URL('.', import.meta.url).pathname
-const BASE = 'http://localhost:3008'
+const BASE = 'http://localhost:3010'
+const PARENT = process.env.NEXT_PUBLIC_DISPLAY_PARENT || 'ninza.eth'
 
 const browser = await chromium.launch()
 // iPhone 17 Pro Max: 1320×2868 px @3x → 440×956 CSS points (docs/DESIGN.md).
@@ -34,13 +35,13 @@ await page.goto(BASE, { waitUntil: 'networkidle' })
 await page.waitForTimeout(1500)
 await shot('01-onboarding')
 
-// ---- claim flow (mints a real subname under tange.eth) ----
+// ---- claim flow (mints a real subname under the configured parent) ----
 await page.locator('button:has-text("Create wallet")').click()
 await page.waitForTimeout(700)
 await shot('02-name-wallet-empty')
 
-const label = 'tangemdemo' + Math.floor(Math.random() * 9000 + 1000)
-await page.locator('input[placeholder="yourname"]').fill(label)
+const label = 'walletdemo' + Math.floor(Math.random() * 9000 + 1000)
+await page.locator(`input[placeholder="${process.env.EXAMPLE_LABEL || 'happy'}"]`).fill(label)
 await page.waitForTimeout(1800)
 await shot('03-name-wallet-available')
 
@@ -122,7 +123,7 @@ await page.waitForTimeout(800)
 await shot('19-address-book')
 await page.locator('button:has-text("Add contact")').first().click()
 await page.waitForTimeout(600)
-await page.locator('input').first().fill(`${label}.tange.eth`)
+await page.locator('input').first().fill(`${label}.${PARENT}`)
 await page.waitForTimeout(2500)
 await shot('20-add-contact')
 await page.getByRole('button', { name: 'Back' }).click()
@@ -130,7 +131,7 @@ await page.waitForTimeout(500)
 await page.getByRole('button', { name: 'Back' }).click()
 await page.waitForTimeout(600)
 // the wallets-group row carries the wallet's ENS name, which is unique
-await page.locator(`button:has-text("${label}.tange.eth")`).first().click()
+await page.locator(`button:has-text("${label}.${PARENT}")`).first().click()
 await page.waitForTimeout(800)
 await shot('21-wallet-detail')
 

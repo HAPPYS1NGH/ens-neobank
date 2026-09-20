@@ -20,7 +20,8 @@
  */
 
 import { Sheet } from '../components/Shell'
-import { MobileWallet, TangemMark } from '../components/Icons'
+import { HardwareCard, MobileWallet } from '../components/Icons'
+import { brand } from '@config'
 import { useWallet, type Wallet } from '../store'
 
 export interface AddWalletSheetProps {
@@ -51,11 +52,11 @@ export function AddWalletSheet({ onClose }: AddWalletSheetProps) {
       <div className="aw-list">
         <button className="aw-row" onClick={() => add('hardware')}>
           <span className="aw-chip">
-            <TangemMark size={22} />
+            <HardwareCard size={22} />
           </span>
           <span className="aw-stack">
-            <span className="aw-title">Add hardware wallet</span>
-            <span className="aw-sub">Scan a Tangem card, then claim its name</span>
+            <span className="aw-title">{brand.copy.addHardwareTitle}</span>
+            <span className="aw-sub">{brand.copy.addHardwareSub}</span>
           </span>
         </button>
 
@@ -64,11 +65,9 @@ export function AddWalletSheet({ onClose }: AddWalletSheetProps) {
             <MobileWallet size={22} />
           </span>
           <span className="aw-stack">
-            <span className="aw-title">Add mobile wallet</span>
+            <span className="aw-title">{brand.copy.addMobileTitle}</span>
             <span className="aw-sub">
-              {hasMobile
-                ? 'You already have a mobile wallet on this device'
-                : 'Create a new wallet on this device, then claim its name'}
+              {hasMobile ? brand.copy.addMobileDisabled : brand.copy.addMobileSub}
             </span>
           </span>
         </button>

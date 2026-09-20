@@ -5,9 +5,9 @@
  *
  * There is no screenshot for this one. It is built out of the pieces IMG_4295
  * already establishes: the 26/700 centred title, the 12/400 grey line under it,
- * an #EBEBEB pill, and the same 46pt button stack pinned to the bottom. Tangem
- * has always had a wallet-name field; this is that field, with a registry
- * behind it.
+ * a white card field (the same object Send and Address book use), and the same
+ * 46pt button stack pinned to the bottom. Tangem has always had a wallet-name
+ * field; this is that field, with a registry behind it.
  *
  * Three things earn their complexity here:
  *
@@ -28,11 +28,12 @@
  * ticking one box can. Skipping stays possible and stays deliberate.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Back, Check, Close, Warning } from '../components/Icons'
 import { ApiError } from '../api'
+import { brand } from '@config'
 import { useWallet } from '../store'
-import { normalizeLabelPreview } from '@/lib/format'
+import { labelPreviewIssue, normalizeLabelPreview } from '@/lib/format'
 
 /* --------------------------------------------------------------- status */
 
@@ -93,6 +94,13 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
     if (!label) {
       seq.current += 1
       setStatus({ kind: 'empty' })
+      return
+    }
+
+    const issue = labelPreviewIssue(label)
+    if (issue) {
+      seq.current += 1
+      setStatus({ kind: 'rejected', message: issue })
       return
     }
 
@@ -167,17 +175,26 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
 
   /* --------------------------------- view --------------------------------- */
 
-  const title = purpose === 'onboarding' ? 'Name your wallet' : 'Name this wallet'
+  const title =
+    purpose === 'onboarding'
+      ? brand.copy.nameOnboardingTitle
+      : purpose === 'addWallet'
+        ? brand.copy.nameAddWalletTitle
+        : brand.copy.nameRenameTitle
   const lede =
-    purpose === 'addWallet'
-      ? 'This is a separate wallet with its own addresses, so it gets its own name — the one you already claimed keeps pointing at the wallet you claimed it for.'
-      : 'One name that receives on every network you turn on, instead of a different address for each.'
+    purpose === 'addWallet' ? brand.copy.nameAddWalletLede : brand.copy.nameOnboardingLede
+
+  const onFormSubmit = (event: FormEvent) => {
+    event.preventDefault()
+    if (disabled) return
+    void submit()
+  }
 
   return (
-    <div className="tgn">
+    <form className="tgn" onSubmit={onFormSubmit}>
       <style>{NAME_WALLET_CSS}</style>
 
-      <button className="circle-btn tgn__back" onClick={w.back} aria-label="Back">
+      <button type="button" className="circle-btn tgn__back" onClick={w.back} aria-label="Back">
         <Back size={22} />
       </button>
 
@@ -185,27 +202,33 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
         <h1 className="title tgn__title">{title}</h1>
         <p className="tgn__lede">{lede}</p>
 
-        <div className="tgn__field" data-state={status.kind} data-skip={skip}>
-          <div className="tgn__entry">
+        <label className="card tgn__field" data-state={status.kind} data-skip={skip}>
+          <span className="tgn__sr">Wallet name</span>
+          <span className="tgn__entry">
             <span className="tgn__sizer" aria-hidden="true">
-              {raw || 'yourname'}
+              {raw || brand.copy.exampleLabel}
             </span>
             <input
+              id="wallet-name"
               className="tgn__input"
               value={raw}
               onChange={(event) => setRaw(event.target.value)}
-              placeholder="yourname"
+              placeholder={brand.copy.exampleLabel}
               disabled={skip}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
               maxLength={32}
-              aria-label="Wallet name"
+              size={1}
+              data-1p-ignore
+              data-lpignore="true"
             />
-          </div>
-          <span className="tgn__parent">.{w.parent}</span>
-        </div>
+          </span>
+          <span className="tgn__parent" aria-hidden="true">
+            .{w.parent}
+          </span>
+        </label>
 
         <StatusLine status={status} fullName={fullName} parent={w.parent} />
 
@@ -235,16 +258,16 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
             <Check size={14} />
           </span>
           <span className="tgn__skip-text">
-            Continue without a name
-            <span className="tgn__skip-sub">You can add one later from Details → Wallets.</span>
+            {brand.copy.continueWithoutName}
+            <span className="tgn__skip-sub">{brand.copy.continueWithoutNameSub}</span>
           </span>
         </label>
 
-        <button className="btn btn--primary" onClick={submit} disabled={disabled}>
-          {w.busy ? 'Claiming…' : skip ? 'Continue' : 'Claim name'}
+        <button className="btn btn--primary" type="submit" disabled={disabled}>
+          {w.busy ? brand.copy.claimingCta : skip ? brand.copy.continueCta : brand.copy.claimCta}
         </button>
       </div>
-    </div>
+    </form>
   )
 }
 
@@ -265,7 +288,11 @@ function StatusLine({
   parent: string
 }) {
   if (status.kind === 'empty') {
-    return <p className="tgn__status tgn__status--idle">Your name will read yourname.{parent}</p>
+    return (
+      <p className="tgn__status tgn__status--idle">
+        Your name will read {brand.copy.exampleLabel}.{parent}
+      </p>
+    )
   }
 
   if (status.kind === 'rejected') {
@@ -334,31 +361,55 @@ const NAME_WALLET_CSS = `
   line-height: var(--lh-body);
 }
 
-/* The field. Taller than a sheet's search pill because it is the only thing on
-   the screen, and it carries the parent inline so the name is never abstract. */
+/* Same object as Send's recipient field and Address book's contact field:
+   a white card, 56px tall, 16px type. The parent sits inside the card as a
+   suffix overlay so the hit area is the whole row, not just the typed label. */
 .tgn__field {
-  margin-top: 32px;
-  height: 52px;
-  border-radius: 26px;
-  background: var(--bg-subtle);
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0 18px;
-  overflow: hidden;
+  margin-top: 32px;
+  min-height: 56px;
+  padding: 0 var(--pad-row);
+  cursor: text;
   transition: box-shadow .18s ease, opacity .18s ease;
 }
 
 .tgn__field[data-state="available"] { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .tgn__field[data-state="taken"],
 .tgn__field[data-state="rejected"] { box-shadow: inset 0 0 0 1.5px var(--price-down); }
-.tgn__field[data-skip="true"] { opacity: .4; }
+.tgn__field[data-skip="true"] { opacity: .4; pointer-events: none; }
 
-/* The input sizes itself to its content so the parent suffix sits right up
-   against the caret instead of floating at the far edge. */
+.tgn__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.tgn__input {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+  field-sizing: content;
+}
+
+.tgn__input::placeholder {
+  color: var(--text-3);
+  font-weight: var(--fw-regular);
+}
+
 .tgn__entry {
   display: inline-grid;
-  max-width: 240px;
+  max-width: 220px;
 }
 .tgn__entry > * { grid-area: 1 / 1; }
 
@@ -366,28 +417,18 @@ const NAME_WALLET_CSS = `
   visibility: hidden;
   white-space: pre;
   pointer-events: none;
-}
-
-.tgn__sizer,
-.tgn__input,
-.tgn__parent {
-  font-size: var(--fs-heading);
+  font-size: 16px;
   font-weight: var(--fw-semibold);
   letter-spacing: -0.01em;
 }
 
-.tgn__input {
-  width: 100%;
-  min-width: 0;
-  color: var(--text-1);
-  text-align: left;
-}
-
-.tgn__input::placeholder { color: var(--text-3); }
-
 .tgn__parent {
   flex: none;
+  font-size: 16px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: -0.01em;
   color: var(--text-3);
+  pointer-events: none;
 }
 
 /* Status ------------------------------------------------------------------ */

@@ -16,19 +16,20 @@
  *   social glyph            22            two rows: six, then three
  *
  * The one change from the real app is the wallet row's title: where the wallet
- * has claimed a name it reads `harpreet.tange.eth` instead of the local string
+ * has claimed a name it reads `happy.ninza.eth` instead of the local string
  * `Wallet`, which is the same substitution Home makes under the balance. The
  * red badge is Tangem's "needs attention" dot; here it means the wallet has no
  * name yet, which is the only outstanding thing this build can tell you about.
  */
 
 import { useEffect, useState } from 'react'
+import { brand } from '@config'
+import { toastNotInDemo } from '@/config/copy'
 import { useWallet } from '../store'
 import {
   AddressBook as AddressBookIcon,
   ChevronRight,
   Plus,
-  SOCIALS,
   Trash,
   Wallet as WalletIcon,
   WalletConnect,
@@ -39,15 +40,14 @@ export interface DetailsProps {
   version?: string
 }
 
-export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
+export function Details({ version = brand.copy.version }: DetailsProps) {
   const w = useWallet()
 
   /** Wallets still waiting for a name, in list order. */
   const unnamed = w.wallets.filter((wallet) => wallet.name === null)
 
   /** Nothing behind these rows in this build; say so rather than dead-ending. */
-  const notInDemo = (what: string) => () =>
-    w.showToast(`${what} is outside this demo — names are the part that is real`)
+  const notInDemo = (what: string) => () => w.showToast(toastNotInDemo(what))
 
   /* -------------------------------------------------------- the reset */
 
@@ -165,17 +165,13 @@ export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
             </button>
           )}
 
-          <p className="dt-foot">
-            You can only have one mobile wallet. Upgrade it to Tangem hardware wallet, or add a new
-            hardware wallet. Each wallet is its own identity with its own addresses, so each one
-            claims — and keeps — its own name.
-          </p>
+          <p className="dt-foot">{brand.copy.walletsFoot}</p>
         </div>
 
         {/* ------------------------------------------------------------- buy */}
         <div className="dt-card">
-          <button className="dt-row dt-row--plain" onClick={notInDemo('The Tangem shop')}>
-            <span className="dt-row-title dt-row-title--accent">Buy Tangem Wallet</span>
+          <button className="dt-row dt-row--plain" onClick={notInDemo(brand.copy.buyHardware)}>
+            <span className="dt-row-title dt-row-title--accent">{brand.copy.buyHardware}</span>
           </button>
         </div>
 
@@ -213,34 +209,31 @@ export function Details({ version = 'Tangem 6.2 (2211)' }: DetailsProps) {
             </span>
             <span className="dt-stack">
               <span className="dt-reset__title">
-                {armed ? 'Tap again to reset' : 'Reset wallet'}
+                {armed ? brand.copy.resetArmed : brand.copy.resetTitle}
               </span>
-              <span className="dt-reset__sub">
-                Clears this app's local state — keys, wallets, settings. Minted ENS names are not
-                deleted; they stay on the registry.
-              </span>
+              <span className="dt-reset__sub">{brand.copy.resetSub}</span>
             </span>
           </button>
         </div>
 
-        {/* --------------------------------------------------------- socials */}
-        {/* Six on the first line, three on the second — IMG_4307's own break. */}
-        <div className="dt-socials">
-          <div className="dt-social-row">
-            {SOCIALS.slice(0, 6).map(({ name, Icon, href }) => (
-              <a key={name} href={href} target="_blank" rel="noreferrer" aria-label={name}>
-                <Icon size={22} />
-              </a>
-            ))}
+        {brand.socials.length > 0 && (
+          <div className="dt-socials">
+            <div className="dt-social-row">
+              {brand.socials.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={social.name}
+                  className="dt-social-link"
+                >
+                  {social.name}
+                </a>
+              ))}
+            </div>
           </div>
-          <div className="dt-social-row">
-            {SOCIALS.slice(6).map(({ name, Icon, href }) => (
-              <a key={name} href={href} target="_blank" rel="noreferrer" aria-label={name}>
-                <Icon size={22} />
-              </a>
-            ))}
-          </div>
-        </div>
+        )}
 
         <p className="dt-version">{version}</p>
       </div>

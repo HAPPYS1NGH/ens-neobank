@@ -1,13 +1,14 @@
 import 'server-only'
 import { createOffchainClient, type OffchainClient } from '@thenamespace/offchain-manager'
 import { normalize } from 'viem/ens'
+import { registry } from '@config'
 
 /**
- * The parents this server is willing to write to. The server refuses to start
- * if NAMESPACE_PARENT_NAME is not in this list — that guard is what stops a
- * live API key writing into the wrong registry.
+ * The parents this server is willing to write to. The list lives in
+ * app.config.ts (`registry.allowedParents`). The server refuses to start if
+ * NAMESPACE_PARENT_NAME is not in it — that guard is what stops a live API key
+ * writing into the wrong registry. `null` accepts any valid ENS name.
  */
-const ALLOWED_PARENTS = ['tange.eth'] as const
 
 export interface ServerConfig {
   apiKey: string
@@ -49,9 +50,11 @@ export function getServerConfig(): ServerConfig {
   const parentName = normalizeParentName(rawParent)
   if (!parentName) throw new ConfigError('NAMESPACE_PARENT_NAME is not a valid ENS name')
 
-  const allowed = ALLOWED_PARENTS.map(normalizeParentName)
-  if (!allowed.includes(parentName)) {
-    throw new ConfigError(`Parent ${parentName} is not in the allowlist for this deployment`)
+  if (registry.allowedParents) {
+    const allowed = registry.allowedParents.map(normalizeParentName)
+    if (!allowed.includes(parentName)) {
+      throw new ConfigError(`Parent ${parentName} is not in the allowlist for this deployment`)
+    }
   }
 
   const rawNetwork = (process.env.NAMESPACE_NETWORK ?? 'mainnet').trim()

@@ -1,4 +1,5 @@
 import { httpError } from './http'
+import { brand } from '@config'
 
 /**
  * Labels are ASCII-only, even though the parent is Unicode.
@@ -18,10 +19,12 @@ export function normalizeLabel(raw: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-const RESERVED = new Set([
-  'admin', 'api', 'app', 'tangem', 'root', 'www', 'support', 'help',
+const STRUCTURAL = [
+  'admin', 'api', 'app', 'root', 'www', 'support', 'help',
   'wallet', 'settings', 'account', 'test', 'null', 'undefined',
-])
+] as const
+
+const RESERVED = new Set<string>([...STRUCTURAL, ...brand.reservedLabels])
 
 export const LABEL_MIN = 3
 export const LABEL_MAX = 20

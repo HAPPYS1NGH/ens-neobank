@@ -1,11 +1,21 @@
-# Tangem × ENS subnames — build spec
+# Reference spec — geometry source
 
-Read this whole file before writing code. Every agent working on this repo shares it.
+> This kit is no longer a Tangem clone. The plot is in [`plot.md`](../plot.md),
+> branding in [`app.config.ts`](../app.config.ts), and the reskin rules in
+> [`AGENTS.md`](../AGENTS.md). What follows is the **geometry source** this
+> kit was distilled from (Tangem iOS 6.2). When you restyle to a new app,
+> sample that app's pixels into DESIGN.md and treat this file as history,
+> not as the product you are shipping.
+
+# Tangem × ENS subnames — build spec (source)
+
+Read [`plot.md`](../plot.md) before writing code. This file is the inherited
+screen list and chain notes from the Tangem demo that supplied the UX.
 
 ## What we are building
 
 A working clone of the **Tangem iOS wallet (6.2)** in which **naming a wallet issues a real
-ENS subname** under `tange.eth`. The name is claimed at the moment the user names their
+ENS subname** under `ninza.eth`. The name is claimed at the moment the user names their
 wallet — the field Tangem already has — with no extra screen, no wallet connection, and no
 separate claim flow.
 
@@ -22,8 +32,8 @@ Four places in the existing UI change:
 
 | Screen | Today | Here |
 |---|---|---|
-| Onboarding, after *Create wallet* | Wallet is auto-named `Wallet` | The name field claims `harpreet.tange.eth` |
-| Home | `Wallet ☁️` under the balance | `harpreet.tange.eth`, still under the balance |
+| Onboarding, after *Create wallet* | Wallet is auto-named `Wallet` | The name field claims `happy.ninza.eth` |
+| Home | `Wallet ☁️` under the balance | `happy.ninza.eth`, still under the balance |
 | Manage tokens | Toggling `BASE MAIN L2` adds a local account | …and writes that chain's address record onto the same name |
 | Receive assets | `0x98EEc6E5bE5FcF8D4027Aa7058bc24c4e2007597` | The name, with the address one tap away |
 | Send | Paste a hex address | Type `alice`, or any ENS name; it resolves per chain |
@@ -31,7 +41,7 @@ Four places in the existing UI change:
 
 **One name, every chain.** The wallet gets one name at creation, minted bare — with no
 address records. Every network the user toggles on in *Manage tokens* then writes that
-chain's address onto the same name, so a single `harpreet.tange.eth` gains BTC, ETH, Base,
+chain's address onto the same name, so a single `happy.ninza.eth` gains BTC, ETH, Base,
 Optimism, Arbitrum and Solana as the user enables them.
 
 Rules the UI enforces (deliberate departures from the real app, documented in the README):
@@ -48,13 +58,14 @@ Rules the UI enforces (deliberate departures from the real app, documented in th
 
 ## Parent name
 
-`tange.eth` — confirmed by the repo owner as the parent they control. It is **not**
-`tangem.eth`. Do not "correct" it anywhere. It appears in `ALLOWED_PARENTS` in
-`src/server/config.ts`; the server refuses to start with any other parent.
+`ninza.eth` — the parent this checkout issues under. It lives in
+`registry.allowedParents` / `registry.productionParent` in `app.config.ts`;
+the server refuses to start unless `NAMESPACE_PARENT_NAME` matches. Names
+read `label.ninza.eth`. Do not hardcode the parent in a screen — use
+`w.parent`.
 
-Because the parent is `tange.eth` rather than the exact brand string, the README must state
-plainly that names read `label.tange.eth`, and no screen may render a fake `…tangem.eth`.
-Show the real name everywhere.
+The geometry source (Tangem iOS) used `tange.eth`. That parent is history
+for this fork; do not put it back in the UI.
 
 ## Design tokens — sampled from the reference pixels
 
@@ -169,7 +180,7 @@ something they do not expose.
   client reads it at `2147492101`. Both numbers are in `src/lib/chains.ts`.
 - **XRP cannot be written.** The registry rejects coin type 144 outright. Not an SDK gap.
 - **Labels are ASCII.** Show the normalized label live rather than mangling it silently.
-- **The registry is shared.** Tag every name this app creates `{ demo: 'tangem-ios' }`
+- **The registry is shared.** Tag every name this app creates `{ demo: 'ninza-kit' }`
   server-side so `npm run cleanup` can find them. Cleanup is a dry run unless labels are
   named explicitly.
 

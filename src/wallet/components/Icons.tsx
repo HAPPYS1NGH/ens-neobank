@@ -63,20 +63,6 @@ function F({ size = 24, children, ...rest }: IconProps & { children: ReactNode }
 
 /* ------------------------------------------------------------------ brand */
 
-/**
- * The Tangem mark: a wide bar over two blocks, top-left of Home (`IMG_4306`)
- * and again in blue on "Add hardware wallet" (`IMG_4308`). Proportions measured
- * off the Home header crop — bar 16/58 of the height, blocks 31/58, gutter
- * 14/52 of the width.
- */
-export const TangemMark = ({ size = 24, ...rest }: IconProps) => (
-  <F size={size} {...rest}>
-    <rect x="2" y="2.6" width="20" height="5.3" rx="1.8" />
-    <rect x="2" y="11.4" width="7.3" height="10.1" rx="1.9" />
-    <rect x="14.7" y="11.4" width="7.3" height="10.1" rx="1.9" />
-  </F>
-)
-
 /** WalletConnect's wave. Simplified to one stroke — at 20px the arcs read as one. */
 export const WalletConnect = ({ size = 24, ...rest }: IconProps) => (
   <S size={size} strokeWidth={2.4} {...rest}>
@@ -368,17 +354,17 @@ export const GitHub = ({ size = 24, ...rest }: IconProps) => (
 )
 
 /**
- * The social row in the order `IMG_4307` prints it. Links point at Tangem's
- * real accounts; nothing here is fetched.
+ * Social row icons. Links come from `brand.socials` in app.config.ts, not here.
+ * Kept so a fork that wants the original glyphs can map name → Icon.
  */
-export const SOCIALS: readonly { name: string; Icon: IconComponent; href: string }[] = [
-  { name: 'X', Icon: XLogo, href: 'https://x.com/tangem' },
-  { name: 'Telegram', Icon: Telegram, href: 'https://t.me/tangem_chat' },
-  { name: 'Instagram', Icon: Instagram, href: 'https://instagram.com/tangemwallet' },
-  { name: 'Facebook', Icon: Facebook, href: 'https://facebook.com/tangemwallet' },
-  { name: 'LinkedIn', Icon: LinkedIn, href: 'https://linkedin.com/company/tangem' },
-  { name: 'YouTube', Icon: YouTube, href: 'https://youtube.com/@tangem_official' },
-  { name: 'Discord', Icon: Discord, href: 'https://discord.gg/tangem' },
-  { name: 'Reddit', Icon: Reddit, href: 'https://reddit.com/r/Tangem' },
-  { name: 'GitHub', Icon: GitHub, href: 'https://github.com/tangem' },
-] as const
+export const SOCIAL_ICONS = {
+  X: XLogo,
+  Telegram,
+  Instagram,
+  Facebook,
+  LinkedIn,
+  YouTube,
+  Discord,
+  Reddit,
+  GitHub,
+} as const

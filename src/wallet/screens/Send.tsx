@@ -8,10 +8,10 @@
  * The recipient field takes four things and treats them as four different
  * things, because they are:
  *
- *   alice                -> alice.tange.eth, read straight from the registry we
+ *   alice                -> alice.ninza.eth, read straight from the registry we
  *                           write to. One request, authoritative, and it works
  *                           for a name claimed seconds ago.
- *   alice.tange.eth      -> the same path, spelled out.
+ *   alice.ninza.eth      -> the same path, spelled out.
  *   vitalik.eth  someone.id
  *                        -> public ENS through the resolve route, at the coin
  *                           type a standard client would use for THIS network
@@ -28,6 +28,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { brand } from '@config'
 import { CHAIN_BY_KEY, NETWORK_BY_ID, type ChainKey } from '@/lib/chains'
 import { assetForNetwork } from '@/lib/assets'
 import { shortAddress } from '@/lib/format'
@@ -69,7 +70,7 @@ function looksLikeAddress(value: string, chain: ChainKey | undefined): boolean {
 }
 
 export function Send({ networkId, initialRecipient }: SendProps) {
-  const { back, go, addressForNetwork, contacts, parent, resolve, walletTitle } = useWallet()
+  const { back, go, addressForNetwork, contacts, parent, resolve, walletTitle, ensName } = useWallet()
   const [to, setTo] = useState(initialRecipient ?? '')
   const [amount, setAmount] = useState('')
   const [resolution, setResolution] = useState<Resolution>({ state: 'empty' })
@@ -204,10 +205,26 @@ export function Send({ networkId, initialRecipient }: SendProps) {
           <ResolutionBlock resolution={resolution} networkName={network.network} parent={parent} />
         </div>
 
-        {!to && contacts.length > 0 && (
+        {!to && (
           <>
-            <p className="sn__label">From your address book</p>
+            <p className="sn__label">Try a name</p>
             <div className="sn__contacts">
+              {ensName && (
+                <button className="pill sn__contact" onClick={() => setTo(ensName.fullName)}>
+                  {ensName.fullName}
+                </button>
+              )}
+              {(!ensName || ensName.label !== brand.copy.exampleLabel) && (
+                <button
+                  className="pill sn__contact"
+                  onClick={() => setTo(brand.copy.exampleLabel)}
+                >
+                  {brand.copy.exampleLabel}
+                </button>
+              )}
+              <button className="pill sn__contact" onClick={() => setTo('vitalik.eth')}>
+                vitalik.eth
+              </button>
               {contacts.slice(0, 4).map((contact) => (
                 <button key={contact.id} className="pill sn__contact" onClick={() => setTo(contact.name)}>
                   {contact.name}
@@ -256,10 +273,16 @@ function ResolutionBlock({
 }) {
   if (resolution.state === 'empty') {
     return (
-      <p className="sn__hint">
-        Type a name — <strong>alice</strong> becomes <strong>alice.{parent}</strong> — or any ENS
-        name, or paste an address.
-      </p>
+      <div className="card sn__hit">
+        <p className="sn__hint">
+          Type a name — <strong>{brand.copy.exampleLabel}</strong> becomes{' '}
+          <strong>
+            {brand.copy.exampleLabel}.{parent}
+          </strong>{' '}
+          — or any ENS name, or paste an address. The chips below fire the lookup so you can see it
+          work.
+        </p>
+      </div>
     )
   }
 
@@ -479,7 +502,11 @@ const CSS = `
 
 .sn__badge { flex: none; }
 
-.sn__hit-address { margin-top: 6px; }
+.sn__hit-address {
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
 
 .sn__hit-source {
   margin-top: 6px;

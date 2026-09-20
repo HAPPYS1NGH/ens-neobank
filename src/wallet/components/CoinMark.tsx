@@ -1,193 +1,187 @@
 'use client'
 
 /**
- * The round coin marks, and the small blue network dot that sits on them.
+ * Coin and network marks. Art is vendored from @web3icons/core (MIT) into
+ * `public/marks/` — background (logo on a brand plate) and branded (glyph).
  *
- * Three facts from the screenshots drive this file:
+ * Three facts still drive the layout:
  *
- *  1. Not every mark has a disc. Bitcoin is a white glyph on an orange circle
- *     (IMG_4306), but Ethereum is a bare diamond with no background at all, and
- *     so is Solana. So a mark is `{ bg?, art }`, not "always a coloured disc".
- *  2. Manage tokens greys a coin's mark until that coin is in the portfolio
- *     (IMG_4302 — Tether, BNB, USDC and TRON all sample monochrome). That is
- *     the `muted` prop, and it is a greyscale filter rather than a second set
- *     of colours, because the greys DESIGN.md sampled are just the brand marks
- *     desaturated.
- *  3. The per-network rows (IMG_4303, IMG_4305) put the network's logo on a
- *     #F1F1F1 disc with an accent-blue dot at the top-right, separated from the
- *     art by a ring of the card behind it. That ring is why `dot` needs to know
- *     the surrounding colour — it defaults to white, which every card is.
+ *  1. Not every mark has a disc. Ethereum and Solana stay branded, with no
+ *     kit circle — the same treatment Tangem uses for those two. Everything
+ *     else uses the background plate, circle-cropped here.
+ *  2. Manage tokens greys a coin's mark until that coin is in the portfolio.
+ *     That is the `muted` prop: `filter: grayscale(1)` on the art, not a
+ *     second palette. The status dot is outside the filter, so it stays blue.
+ *  3. Per-network rows put the glyph on a #F1F1F1 disc with an accent-blue
+ *     dot at the top-right. `disc` selects the branded file so we never stack
+ *     a background plate on that grey circle.
  *
- * Only the four marks a screenshot actually shows are drawn by hand. Everything
- * else falls back to the coin's glyph from `src/lib/assets.ts` on its brand
- * colour — which is also what the real app does with a token it has no icon for.
+ * Token-on-host rows (USDT, USDC, BEP20 / ERC20 / SPL / TRC20) keep the
+ * token's mark, not the host chain's.
  */
 
-import { useId } from 'react'
-import type { ReactNode } from 'react'
-import { ASSETS, type AssetMeta } from '@/lib/assets'
-import { NETWORK_BY_ID, type CoinId } from '@/lib/chains'
+import { ASSETS } from '@/lib/assets'
+import {
+  NETWORK_BY_ID,
+  NETWORKS,
+  type CoinId,
+  type NetworkSpec,
+} from '@/lib/chains'
 
-interface Art {
-  /** Disc colour behind the art. Omitted for marks that are just a shape. */
-  bg?: string
-  art: ReactNode
+type Variant = 'branded' | 'background'
+
+interface Resolved {
+  src: string
+  /** True when the SVG already paints a brand-coloured plate. */
+  filled: boolean
 }
 
-/** Every path below is drawn in a 32 x 32 box and scaled by the `size` prop. */
-function bitcoin(): Art {
-  return {
-    bg: 'var(--coin-btc)',
-    art: (
-      <text
-        x="16"
-        y="23"
-        textAnchor="middle"
-        fontSize="19"
-        fontWeight="700"
-        fill="#fff"
-        fontFamily="Helvetica, Arial, sans-serif"
-      >
-        ₿
-      </text>
-    ),
-  }
-}
-
-/** The lavender-grey octahedron. No disc — IMG_4306 draws it on bare card. */
-function ethereum(): Art {
-  return {
-    art: (
-      <g>
-        <path d="M16 2.6 8.9 16.1 16 20.2Z" fill="var(--coin-eth-light)" />
-        <path d="M16 2.6 23.1 16.1 16 20.2Z" fill="var(--coin-eth-mid)" />
-        <path d="M16 22 8.9 17.9 16 29.4Z" fill="var(--coin-eth-mid)" />
-        <path d="M16 22 23.1 17.9 16 29.4Z" fill="var(--coin-eth-dark)" />
-      </g>
-    ),
-  }
-}
-
-/** Base: a thick blue ring with a bar running from the left edge to the centre. */
-function base(): Art {
-  return {
-    art: (
-      <g>
-        <circle cx="16" cy="16" r="13.2" fill="none" stroke="var(--coin-base)" strokeWidth="5.6" />
-        <rect x="3.4" y="15" width="12.6" height="2" fill="var(--coin-base)" />
-      </g>
-    ),
-  }
-}
-
-/** Solana: three slanted bars, purple into mint. No disc. */
-function solana(gradientId: string): Art {
-  return {
-    art: (
-      <g>
-        <defs>
-          <linearGradient id={gradientId} x1="6" y1="26" x2="26" y2="6">
-            <stop offset="0" stopColor="var(--coin-sol-from)" />
-            <stop offset="1" stopColor="var(--coin-sol-to)" />
-          </linearGradient>
-        </defs>
-        <path d="M9.4 9.2h16.4l-3.2 3.6H6.2l3.2-3.6Z" fill={`url(#${gradientId})`} />
-        <path d="M6.2 14.2h16.4l3.2 3.6H9.4l-3.2-3.6Z" fill={`url(#${gradientId})`} />
-        <path d="M9.4 19.2h16.4l-3.2 3.6H6.2l3.2-3.6Z" fill={`url(#${gradientId})`} />
-      </g>
-    ),
-  }
-}
-
-/** The fallback: the coin's glyph, white on its brand colour. */
-function glyphDisc(asset: AssetMeta): Art {
-  return {
-    bg: asset.color,
-    art: (
-      <text
-        x="16"
-        y="22.4"
-        textAnchor="middle"
-        fontSize="17"
-        fontWeight="700"
-        fill={asset.ink}
-        fontFamily="Helvetica, Arial, sans-serif"
-      >
-        {asset.mark}
-      </text>
-    ),
-  }
-}
-
-/** A network with no logo of its own: its initial on the network's colour. */
-function letterDisc(letter: string, color: string): Art {
-  return {
-    bg: color,
-    art: (
-      <text
-        x="16"
-        y="21.8"
-        textAnchor="middle"
-        fontSize="15"
-        fontWeight="700"
-        fill="#fff"
-        fontFamily="Helvetica, Arial, sans-serif"
-      >
-        {letter}
-      </text>
-    ),
-  }
-}
-
-function artForCoin(coinId: CoinId, gradientId: string): Art {
-  switch (coinId) {
-    case 'bitcoin':
-      return bitcoin()
-    case 'ethereum':
-      return ethereum()
-    case 'solana':
-      return solana(gradientId)
-    default:
-      return glyphDisc(ASSETS[coinId])
-  }
+const TOKEN_SLUG: Record<Exclude<CoinId, 'hyperliquid'>, string> = {
+  bitcoin: 'btc',
+  ethereum: 'eth',
+  tether: 'usdt',
+  bnb: 'bnb',
+  xrp: 'xrp',
+  usdc: 'usdc',
+  solana: 'sol',
+  tron: 'trx',
+  dogecoin: 'doge',
+  zcash: 'zec',
 }
 
 /**
- * Which drawing a network row gets. `eth-base` is Base, not Ethereum — the row
- * shows the network's logo, which is the whole point of the sub-list.
+ * Network-identity files. Token-on-host rows never consult this — they go
+ * through the coin map instead.
  */
-function artForNetwork(networkId: string, gradientId: string): Art {
-  const network = NETWORK_BY_ID[networkId]
-  if (!network) return letterDisc('?', '#B8B8B8')
-  if (networkId === 'eth-base' || networkId === 'usdc-base') return base()
-  if (network.chain === 'sol' && network.coinId === 'solana') return solana(gradientId)
-  // A token row (USDC on Base, Tether on Tron) keeps its own coin's mark.
-  if (network.coinId !== 'ethereum') return artForCoin(network.coinId, gradientId)
-  if (networkId === 'eth-main') return ethereum()
-  return letterDisc(network.title.charAt(0), network.color)
+const NETWORK_FILE: Record<string, { kind: 'networks' | 'tokens'; file: string }> = {
+  'btc-main': { kind: 'networks', file: 'bitcoin' },
+  'eth-main': { kind: 'networks', file: 'ethereum' },
+  'eth-arb-nova': { kind: 'networks', file: 'arbitrum-nova' },
+  'eth-arb': { kind: 'networks', file: 'arbitrum-one' },
+  'eth-aurora': { kind: 'networks', file: 'aurora' },
+  'eth-base': { kind: 'networks', file: 'base' },
+  'eth-blast': { kind: 'networks', file: 'blast' },
+  'eth-cyber': { kind: 'tokens', file: 'cyber' },
+  'eth-linea': { kind: 'networks', file: 'linea' },
+  'eth-op': { kind: 'networks', file: 'optimism' },
+  'eth-scroll': { kind: 'networks', file: 'scroll' },
+  'eth-taiko': { kind: 'networks', file: 'taiko' },
+  'eth-zksync': { kind: 'networks', file: 'zksync' },
+  'eth-zora': { kind: 'networks', file: 'zora' },
+  'bnb-smart': { kind: 'networks', file: 'binance-smart-chain' },
+  'bnb-beacon': { kind: 'tokens', file: 'bnb' },
+  'xrp-main': { kind: 'networks', file: 'xrp' },
+  'sol-main': { kind: 'networks', file: 'solana' },
+  'tron-main': { kind: 'networks', file: 'tron' },
+  'hype-evm': { kind: 'networks', file: 'hyper-evm' },
+  'doge-main': { kind: 'tokens', file: 'doge' },
+  'zec-main': { kind: 'tokens', file: 'zec' },
 }
 
-/* ---------------------------------------------------------------- rendering */
+/** IMG_4305. The plate under a network row's logo when the art has no circle. */
+const NETWORK_DISC = '#F1F1F1'
+
+function isTokenOnHost(network: NetworkSpec): boolean {
+  return (
+    network.tag === 'ERC20' ||
+    network.tag === 'BEP20' ||
+    network.tag === 'TRC20' ||
+    network.tag === 'SPL'
+  )
+}
+
+function coinVariant(coinId: CoinId): Variant {
+  return coinId === 'ethereum' || coinId === 'solana' ? 'branded' : 'background'
+}
+
+function resolveCoin(coinId: CoinId, variant: Variant): Resolved {
+  if (coinId === 'hyperliquid') {
+    return {
+      src: `/marks/networks/${variant}/hyper-evm.svg`,
+      filled: variant === 'background',
+    }
+  }
+  return {
+    src: `/marks/tokens/${variant}/${TOKEN_SLUG[coinId]}.svg`,
+    filled: variant === 'background',
+  }
+}
+
+function resolveNetwork(networkId: string, disc: boolean): Resolved | null {
+  const network = NETWORK_BY_ID[networkId]
+  if (!network) return null
+
+  if (isTokenOnHost(network)) {
+    const variant = disc ? 'branded' : coinVariant(network.coinId)
+    return resolveCoin(network.coinId, variant)
+  }
+
+  const file = NETWORK_FILE[networkId]
+  if (!file) return null
+
+  const variant: Variant = disc
+    ? 'branded'
+    : networkId === 'eth-main' || networkId === 'sol-main'
+      ? 'branded'
+      : 'background'
+
+  return {
+    src: `/marks/${file.kind}/${variant}/${file.file}.svg`,
+    filled: variant === 'background',
+  }
+}
+
+for (const network of NETWORKS) {
+  if (isTokenOnHost(network)) continue
+  if (!NETWORK_FILE[network.id]) {
+    throw new Error(`missing network mark mapping for ${network.id}`)
+  }
+}
+
+function letterFallback(letter: string, color: string, size: number) {
+  return (
+    <span
+      style={{
+        display: 'grid',
+        placeItems: 'center',
+        width: size,
+        height: size,
+        borderRadius: '999px',
+        background: color,
+        color: '#fff',
+        fontFamily: 'Helvetica, Arial, sans-serif',
+        fontWeight: 700,
+        fontSize: Math.round(size * 0.47),
+        lineHeight: 1,
+      }}
+    >
+      {letter}
+    </span>
+  )
+}
 
 function Mark({
-  art,
+  src,
+  filled,
   size,
   muted,
   dot,
   dotRing,
-  discBg,
+  disc,
   title,
+  fallback,
 }: {
-  art: Art
+  src: string | null
+  filled: boolean
   size: number
   muted: boolean
   dot: boolean
   dotRing: string
-  /** Forces a disc behind art that has none — the network rows do this. */
-  discBg?: string
+  disc: boolean
   title?: string
+  fallback: ReturnType<typeof letterFallback>
 }) {
-  const bg = discBg ?? art.bg
+  const plate = disc && !filled
   return (
     <span
       style={{
@@ -201,15 +195,40 @@ function Mark({
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 32 32"
-        style={{ display: 'block', filter: muted ? 'grayscale(1)' : undefined }}
+      <span
+        style={{
+          display: 'block',
+          width: size,
+          height: size,
+          borderRadius: '999px',
+          background: plate ? NETWORK_DISC : undefined,
+          overflow: filled ? 'hidden' : undefined,
+          filter: muted ? 'grayscale(1)' : undefined,
+        }}
       >
-        {bg && <circle cx="16" cy="16" r="16" fill={bg} />}
-        {art.art}
-      </svg>
+        {src ? (
+          <img
+            src={src}
+            alt=""
+            width={size}
+            height={size}
+            draggable={false}
+            style={{
+              display: 'block',
+              width: size,
+              height: size,
+              objectFit: 'contain',
+              // Branded glyphs on the grey plate need a little air — Base's
+              // mark is a full-bleed rounded square and would otherwise fill
+              // the disc.
+              boxSizing: 'border-box',
+              padding: plate ? Math.max(2, Math.round(size * 0.12)) : 0,
+            }}
+          />
+        ) : (
+          fallback
+        )}
+      </span>
       {dot && (
         <span
           style={{
@@ -250,15 +269,19 @@ export function CoinMark({
   dotRing?: string
   label?: string
 }) {
-  const gradientId = useId()
+  const art = resolveCoin(coinId, coinVariant(coinId))
+  const asset = ASSETS[coinId]
   return (
     <Mark
-      art={artForCoin(coinId, gradientId)}
+      src={art.src}
+      filled={art.filled}
       size={size}
       muted={muted}
       dot={dot}
       dotRing={dotRing}
+      disc={false}
       title={label}
+      fallback={letterFallback(asset.mark, asset.color, size)}
     />
   )
 }
@@ -266,7 +289,7 @@ export function CoinMark({
 /**
  * A network's mark. Home token rows use it bare at 39px; the indented network
  * rows in Manage tokens use it at 22px, muted, dotted, on the sampled #F1F1F1
- * disc those rows draw behind every logo.
+ * disc those rows draw behind every logo that has no built-in plate.
  */
 export function NetworkMark({
   networkId,
@@ -286,20 +309,21 @@ export function NetworkMark({
   dotRing?: string
   label?: string
 }) {
-  const gradientId = useId()
-  const art = artForNetwork(networkId, gradientId)
+  const art = resolveNetwork(networkId, disc)
+  const network = NETWORK_BY_ID[networkId]
+  const letter = network?.title.charAt(0) ?? '?'
+  const color = network?.color ?? '#B8B8B8'
   return (
     <Mark
-      art={art}
+      src={art?.src ?? null}
+      filled={art?.filled ?? false}
       size={size}
       muted={muted}
       dot={dot}
       dotRing={dotRing}
-      discBg={disc && !art.bg ? NETWORK_DISC : undefined}
+      disc={disc}
       title={label}
+      fallback={letterFallback(letter, color, size)}
     />
   )
 }
-
-/** IMG_4305 (280, 1490). The plate under a network row's logo. */
-const NETWORK_DISC = '#F1F1F1'

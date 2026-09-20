@@ -1,12 +1,12 @@
 {
-  "name": "tangem-ens-demo",
+  "name": "ninza",
   "private": true,
   "version": "0.1.0",
-  "description": "Tangem wallet UI clone demonstrating ENS subname issuance at wallet creation, multi-chain address records, and an ENS-native address book.",
+  "description": "Starter kit for mobile wallet demos that issue gasless offchain ENS subnames at wallet creation, write per-chain address records, and resolve names on send.",
   "scripts": {
-    "dev": "next dev -p 3008",
+    "dev": "next dev -p 3010",
     "build": "next build",
-    "start": "next start -p 3008",
+    "start": "next start -p 3010",
     "typecheck": "tsc --noEmit",
     "cleanup": "node scripts/cleanup-demo-names.mjs",
     "check:secrets": "node scripts/check-client-boundary.mjs",
@@ -32,5 +32,7 @@
     "playwright": "1.62.1",
     "typescript": "^5.6.3"
   },
-  "engines": { "node": ">=20.9.0" }
+  "engines": {
+    "node": ">=20.9.0"
+  }
 }

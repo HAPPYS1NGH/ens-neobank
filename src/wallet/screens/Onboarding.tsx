@@ -18,6 +18,7 @@
  * name IS the wallet creation flow. See SPEC.md.
  */
 
+import { brand } from '@config'
 import { Back, type IconComponent } from '../components/Icons'
 import { useWallet } from '../store'
 
@@ -124,30 +125,7 @@ function CardFilled({ size = 20 }: { size?: number }) {
 
 /* ------------------------------------------------------------------ rows */
 
-interface Feature {
-  Icon: IconComponent
-  title: string
-  body: string
-}
-
-/** Verbatim from IMG_4295 — the copy is Tangem's, not ours. */
-const FEATURES: readonly Feature[] = [
-  {
-    Icon: LockFilled,
-    title: 'Private keys stay on your device',
-    body: 'Your private keys are securely encrypted and stored on your phone',
-  },
-  {
-    Icon: SeedFilled,
-    title: 'Seed phrase backup',
-    body: 'Create or restore your wallet with a recovery phrase.',
-  },
-  {
-    Icon: CardFilled,
-    title: 'Upgrade to hardware wallet',
-    body: 'Transfer your mobile wallet to a Tangem card or ring anytime, securely.',
-  },
-]
+const FEATURE_ICONS: readonly IconComponent[] = [LockFilled, SeedFilled, CardFilled]
 
 /* ---------------------------------------------------------------- screen */
 
@@ -191,39 +169,38 @@ export function Onboarding({ onCreate, onImport, onBack }: OnboardingProps) {
           <WalletArt />
         </div>
 
-        <h1 className="title tgo__title">Create Mobile Wallet</h1>
+        <h1 className="title tgo__title">{brand.copy.onboardingTitle}</h1>
 
         <ul className="tgo__features">
-          {FEATURES.map(({ Icon, title, body }) => (
-            <li className="tgo__feature" key={title}>
-              <span className="tgo__chip">
-                <Icon size={20} />
-              </span>
-              <div className="tgo__feature-text">
-                <p className="tgo__feature-title">{title}</p>
-                <p className="tgo__feature-body">{body}</p>
-              </div>
-            </li>
-          ))}
+          {brand.copy.features.map((feature, index) => {
+            const Icon = FEATURE_ICONS[index]
+            return (
+              <li className="tgo__feature" key={feature.title}>
+                <span className="tgo__chip">
+                  <Icon size={20} />
+                </span>
+                <div className="tgo__feature-text">
+                  <p className="tgo__feature-title">{feature.title}</p>
+                  <p className="tgo__feature-body">{feature.body}</p>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       </div>
 
       <div className="tgo__foot">
         <button className="btn btn--secondary" onClick={importWallet}>
-          Import existing wallet
+          {brand.copy.importWallet}
         </button>
         <button className="btn btn--primary" onClick={create}>
-          Create wallet
+          {brand.copy.createWallet}
         </button>
         <p className="tgo__terms">
-          By continuing, you agree to the
+          {brand.copy.termsPrefix}
           <br />
-          <a
-            href="https://tangem.com/en/terms-of-use/"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            Terms of service
+          <a href={brand.copy.termsHref} target="_blank" rel="noreferrer noopener">
+            {brand.copy.termsLabel}
           </a>
         </p>
       </div>
@@ -283,6 +260,21 @@ const ONBOARDING_CSS = `
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tgo__feature {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: tgo-feature-in 180ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+  .tgo__feature:nth-child(1) { animation-delay: 0ms; }
+  .tgo__feature:nth-child(2) { animation-delay: 50ms; }
+  .tgo__feature:nth-child(3) { animation-delay: 100ms; }
+}
+
+@keyframes tgo-feature-in {
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .tgo__chip {

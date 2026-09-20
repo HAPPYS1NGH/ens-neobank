@@ -32,7 +32,7 @@
  *   w.addressForChain(chainKey)     the address this wallet receives at
  *   w.addressForNetwork(networkId)  same, resolved through the network's chain
  *
- * NAMES  (every one of these is a real write to tange.eth)
+ * NAMES  (every one of these is a real write to the configured parent)
  *   await w.checkName(label)      -> { label, available, parentName } | throws ApiError
  *   await w.claimName(label, id?) -> { ok } | { ok: false, error }
  *   w.skipName()                  the user ticked 'Continue without a name'
@@ -76,6 +76,7 @@ import { portfolioTotal, tokenRows, type TokenRow } from '@/lib/assets'
 import { addressFor, evmAddress, getSeed, resetSeed, signOwnership } from '@/lib/keys'
 import * as api from './api'
 import { ApiError, DISPLAY_PARENT, type ResolutionDTO, type WalletNameDTO } from './api'
+import { brand } from '@config'
 
 /* ------------------------------- the wallet ------------------------------ */
 
@@ -182,7 +183,7 @@ type Action =
   | { type: 'toast'; message: string | null }
   | { type: 'busy'; busy: boolean }
 
-const STORAGE_KEY = 'tangem.demo.state.v1'
+const STORAGE_KEY = `${brand.storagePrefix}.state.v1`
 
 /**
  * What survives a reload. The name itself is re-read from the registry.
@@ -207,7 +208,7 @@ const DEFAULT_WALLET_ID = 'wallet-1'
 // Nothing appears until the user adds it (Manage tokens or the receive flow).
 const emptyPersisted: Persisted = {
   wallets: [
-    { id: DEFAULT_WALLET_ID, label: 'Wallet', kind: 'mobile', account: 0, enabledNetworkIds: [] },
+    { id: DEFAULT_WALLET_ID, label: brand.copy.unnamedLabel, kind: 'mobile', account: 0, enabledNetworkIds: [] },
   ],
   activeWalletId: DEFAULT_WALLET_ID,
   contacts: [],
@@ -385,7 +386,7 @@ export type NetworkWriteResult = {
 }
 
 interface Ctx extends State {
-  /** The parent every name is issued under: `tange.eth`. Not `tangem.eth`. */
+  /** The parent every name is issued under, from DISPLAY_PARENT / app.config. */
   parent: string
   wallet: Wallet
   /** The active wallet's EVM address — the owner its name is issued to. */
@@ -562,7 +563,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       owner,
       ensName,
       isNamed: ensName !== null,
-      walletTitle: ensName?.fullName ?? wallet?.label ?? 'Wallet',
+      walletTitle: ensName?.fullName ?? wallet?.label ?? brand.copy.unnamedLabel,
       enabledNetworkIds,
       unnamedCount: state.wallets.filter((w) => w.name === null).length,
 
@@ -714,7 +715,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           type: 'addWallet',
           wallet: {
             id,
-            label: `Wallet ${next}`,
+            label: `${brand.copy.unnamedLabel} ${next}`,
             name: null,
             kind,
             account,

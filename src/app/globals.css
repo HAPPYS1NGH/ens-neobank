@@ -1,17 +1,12 @@
-/* Tangem iOS 6.2 — design tokens sampled from reference/screens/*.PNG.
+/* Kit tokens. Geometry, type, and radius live here and stay shared across
+ * brands — that is the UX this template distilled. Colour is injected at
+ * runtime from `brand.colors` in app.config.ts (see src/config/tokens.ts);
+ * the hex values below are the neutral fallback so the file still paints if
+ * the injector is missing. Do not inline a new hex in a screen: add a token,
+ * or change the preset.
  *
- * Every value here came out of a pixel, not a memory. The audit trail — source
- * image and coordinate for each one — is in docs/DESIGN.md. If you need a colour
- * that is not here, sample it and add it here; do not inline a hex in a screen.
- *
- * Scale: the shots are 1320 x 2868 (iPhone 17 Pro Max, @3x), so the app's own
- * coordinate space is 440 x 956 points. We render 1 CSS px = 1 iOS point, which
- * makes every measurement in DESIGN.md a px value you can use directly.
- *
- * Light theme only. Tangem's Details screens (IMG_4307/4308) were shot at night
- * with iOS auto-dark on; they are recoloured here, not carried over. There are
- * deliberately no `prefers-color-scheme: dark` blocks — a dark override would
- * fight the one theme the rest of the build assumes.
+ * Scale: 1 CSS px = 1 iOS point on a 440 × 956 canvas (iPhone 17 Pro Max).
+ * Light theme only. There is no `prefers-color-scheme: dark` block.
  */
 
 :root {
@@ -41,8 +36,9 @@
   --text-wash-2: #6b6c78; /* the wallet name under it */
 
   /* ------------------------------------------------------------------ accent */
-  --accent: #4396f7; /* + icons, MAIN / MAIN L2 tags, links, price-up */
-  --accent-soft: #e8f4fe; /* the tinted circle behind an accent glyph */
+  /* Neutral fallback. Live values come from brand.colors via layout.tsx. */
+  --accent: #4396f7;
+  --accent-soft: #e8f4fe;
   --accent-ink: #ffffff;
   /* Keyboard focus. Only :focus-visible ever draws it, so a mouse click or a
    * tap stays as quiet as the shots; a Tab shows one accent ring. */
@@ -50,7 +46,7 @@
   --focus-offset: 2px;
 
   /* ------------------------------------------------------- market + feedback */
-  /* Tangem draws gains in the accent blue, not green. Do not "fix" this. */
+  /* Neutral fallback uses accent for gains, not green. A preset may override. */
   --price-up: #4396f7;
   --price-down: #eb483f;
   --warning: #f4ba46; /* the regional-restriction triangle */
@@ -63,47 +59,20 @@
   --track-on: #1e1e1e;
   --knob: #ffffff;
 
-  /* -------------------------------------------------------------- coin marks */
-  --coin-btc: #e9973c;
-  --coin-eth-light: #8b91af;
-  --coin-eth-mid: #63688c;
-  --coin-eth-dark: #464972;
-  --coin-base: #204ff4;
-  --coin-sol-from: #8251ed;
-  --coin-sol-to: #70e9af;
-  --coin-usdt: #009393;
-  --coin-bnb: #f0b90b;
-  --coin-tron: #eb0029;
-  --coin-doge: #c3a634;
-  --coin-zec: #ecb244;
-  /* Manage tokens greys a coin's mark until it is in the portfolio. */
-  --coin-off-1: #747474;
-  --coin-off-2: #b8b8b8;
-  --coin-off-3: #4b4b4b;
-  --coin-off-4: #3c3c3c;
-
   /* ------------------------------------------------------------------- scrim */
   /* Solid black at 0.71 reproduces every sampled pair on IMG_4301/4305. */
   --scrim: rgba(0, 0, 0, 0.71);
 
   /* --------------------------------------------------------------- the wash */
-  /* The lavender bloom behind the Home balance. Centre sits at 43% across and
-   * 13px down — effectively on the top edge — and the ellipse is 2.17x taller
-   * than it is wide, which is why it is still visible level with the promo card
-   * but gone before the screen's left and right edges. */
+  /* Home balance bloom. Stops are derived from --wash-core / --wash-edge so a
+   * preset retints it without copying the gradient. */
   --wash-core: #b5bae7;
   --wash-edge: #f4f4f4;
   --wash: radial-gradient(
     ellipse 280px 609px at 43% 13px,
-    #b5bae7 0%,
-    #b7bce8 12%,
-    #c1c5eb 24%,
-    #cecfec 37%,
-    #dbdaef 49%,
-    #e6e4f2 61%,
-    #ecebf2 73%,
-    #f1eff4 85%,
-    #f4f4f4 100%
+    var(--wash-core) 0%,
+    color-mix(in srgb, var(--wash-core) 70%, var(--wash-edge)) 40%,
+    var(--wash-edge) 100%
   );
   /* The promo card's own left-to-right wash: cool lavender into a warm sage. */
   --promo-wash: linear-gradient(100deg, #e1dee7 0%, #eaebec 55%, #e6ecdf 100%);
@@ -376,16 +345,17 @@ svg {
   border-radius: var(--r-button);
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
-  transition: opacity 0.15s ease;
+  transition: transform 150ms cubic-bezier(0.32, 0.72, 0, 1), opacity 150ms ease;
 }
 
-.btn:active {
-  opacity: 0.7;
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .btn:disabled {
   opacity: 0.35;
   cursor: default;
+  transform: none;
 }
 
 .btn--primary {
@@ -469,8 +439,9 @@ svg {
 }
 
 /* Toggle ------------------------------------------------------------------- */
-/* Tangem's switch is wider and flatter than the iOS default: 50 x 22, not
- * 51 x 31. Measured off the SOLANA MAIN row in IMG_4305. */
+/* The kit switch is wider and flatter than the iOS default: 50 × 22, not
+ * 51 × 31. Keep these numbers when restyling unless the target app's switch
+ * is a different object. */
 
 .toggle {
   width: 50px;
@@ -479,7 +450,7 @@ svg {
   background: var(--track-off);
   padding: 2px;
   flex: none;
-  transition: background 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .toggle[data-on="true"] {
@@ -496,7 +467,7 @@ svg {
   border-radius: var(--r-icon);
   background: var(--knob);
   transform: translateX(0);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
 .toggle[data-on="true"] .toggle__knob {

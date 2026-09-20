@@ -3,17 +3,15 @@
 /**
  * Add & Manage — `reference/screens/IMG_4300.PNG`.
  *
- * The Home screen dimmed behind a short sheet with two white card rows: one to
- * add tokens, one to organise what is already there. The sheet chrome itself
+ * Two white card rows: Add chain writes a network onto the name, Organize
+ * tokens turns those writable networks on or off. The sheet chrome itself
  * (32pt corners, centred 15/600 title, white circular X, black 0.71 scrim) is
  * the shared primitive in components/Shell.tsx; this file is the two rows.
  *
  * Measured off the shot, device px ÷ 3: rows 68pt tall with a 12pt gap, a 46pt
  * tinted chip, 16/600 title over a 12pt subtitle, chevron at the right.
  *
- * Both rows are whole-sheet swaps rather than stacked modals — "Add tokens"
- * lands on the token picker in receive mode, "Organize tokens" on the Manage
- * tokens sheet the toggles live in.
+ * Both rows are whole-sheet swaps rather than stacked modals.
  */
 
 import { Sheet } from '../components/Shell'
@@ -34,20 +32,13 @@ export function AddManageSheet({ onClose }: AddManageSheetProps) {
       <style>{CSS}</style>
 
       <div className="am-list">
-        {/* The token picker is what Home's Add funds, the promo card and the
-         * dock search all reach for too — several doors into the same screen,
-         * as in the app. Like them, it opens in receive mode: this build
-         * receives, buying is out of scope. */}
-        <button
-          className="am-row"
-          onClick={() => w.openSheet({ kind: 'chooseToken', purpose: 'receive' })}
-        >
+        <button className="am-row" onClick={() => w.openSheet({ kind: 'addNetwork' })}>
           <span className="am-chip">
             <Plus size={22} />
           </span>
           <span className="am-stack">
-            <span className="am-title">Add tokens</span>
-            <span className="am-sub">Add to your portfolio</span>
+            <span className="am-title">Add chain</span>
+            <span className="am-sub">Write a network onto your name</span>
           </span>
           <ChevronRight size={20} className="am-chevron" />
         </button>
@@ -58,7 +49,7 @@ export function AddManageSheet({ onClose }: AddManageSheetProps) {
           </span>
           <span className="am-stack">
             <span className="am-title">Organize tokens</span>
-            <span className="am-sub">Sorting and grouping</span>
+            <span className="am-sub">Turn networks on or off</span>
           </span>
           <ChevronRight size={20} className="am-chevron" />
         </button>
@@ -68,7 +59,7 @@ export function AddManageSheet({ onClose }: AddManageSheetProps) {
 }
 
 /* --------------------------------------------------------------------- css */
-/* Prefixed `am-`. Row copy is verbatim from IMG_4300. */
+/* Prefixed `am-`. */
 
 const CSS = `
 .am-list {

@@ -19,6 +19,7 @@
 import { Check, Copy, Plus } from '../components/Icons'
 import { NetworkMark } from '../components/CoinMark'
 import { shortAddress } from '@/lib/format'
+import { brand } from '@config'
 import { NETWORKS, type ChainKey, useWallet } from '../store'
 
 /* ---------------------------------------------------------------- screen */
@@ -73,7 +74,7 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
           <Check size={24} />
         </span>
 
-        <h1 className="title tgc__title">Name claimed</h1>
+        <h1 className="title tgc__title">{brand.copy.claimedTitle}</h1>
 
         <p className="tgc__name">
           <span className="tgc__name-label">{fullName.split('.')[0]}</span>
@@ -81,9 +82,7 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
         </p>
 
         <p className="tgc__lede">
-          {rows.length > 0
-            ? 'Anything sent to this name reaches this wallet, on every network you turn on.'
-            : 'This name has no chains attached yet. Add one from Manage tokens or Receive, and anything sent to the name reaches this wallet there.'}
+          {rows.length > 0 ? brand.copy.claimedLedeNamed : brand.copy.claimedLedeBare}
         </p>
 
         {rows.length > 0 ? (
@@ -115,10 +114,10 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
             </button>
             <button
               className="tgc__next"
-              onClick={() => w.openSheet({ kind: 'manageTokens' })}
+              onClick={() => w.openSheet({ kind: 'addNetwork' })}
             >
               <Plus size={16} />
-              Add a network to make it receive on-chain
+              Add chain
             </button>
           </>
         )}
@@ -126,7 +125,7 @@ export function NameClaimed({ onContinue }: NameClaimedProps) {
 
       <div className="tgc__foot">
         <button className="btn btn--primary" onClick={onContinue ?? (() => w.reset({ name: 'home' }))}>
-          Continue
+          {brand.copy.claimedCta}
         </button>
       </div>
     </div>

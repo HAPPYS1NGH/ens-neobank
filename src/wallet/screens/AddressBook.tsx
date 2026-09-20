@@ -22,17 +22,22 @@
  *   AddContact    the add form, wired to the store's `addContact` screen route.
  *                 It resolves while you type and will not save a name that did
  *                 not answer, because an address book that stores an
- *                 unresolvable string has already failed at its one job.
+ *                 unresolvable string has already failed at its one job. A
+ *                 dotted name is taken as written (`vitalik.eth`); a bare
+ *                 label is tried as `label.<parent>`. The field does not glue
+ *                 the parent on as a suffix — that made it look like only
+ *                 this app's subnames were valid.
  *
  * The Send screen consumes these contacts straight from the store (`w.contacts`
  * -> `setTo(contact.name)`), so anything saved here is immediately pickable
  * there. No extra wiring exists or is needed.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { CHAIN_BY_KEY, chainsForNetworks, type ChainKey } from '@/lib/chains'
 import { shortAddress } from '@/lib/format'
 import * as api from '../api'
+import { brand } from '@config'
 import { useWallet, type Contact } from '../store'
 import { ChevronDown, Plus, Search, Trash } from '../components/Icons'
 
@@ -100,9 +105,9 @@ export function AddressBook() {
             </span>
             <h2 className="ab-empty-title">No contacts yet</h2>
             <p className="ab-empty-copy">
-              A contact here is a name, not a hex address. Save <strong>alice</strong> once and it
-              resolves live on every chain you use — so it keeps working when the person behind it
-              changes wallets.
+              A contact here is an ENS name, not a hex address. Save{' '}
+              <strong>{brand.copy.exampleLabel}</strong> once and it resolves live on every chain
+              you use — so it keeps working when the person behind it changes wallets.
             </p>
             <button className="btn btn--primary ab-empty-cta" onClick={() => w.go({ name: 'addContact' })}>
               Add contact
@@ -354,36 +359,45 @@ export function AddContact() {
     w.showToast(`${status.name} saved to your address book`)
   }
 
+  function onFormSubmit(event: FormEvent) {
+    event.preventDefault()
+    save()
+  }
+
   return (
-    <div className="ac">
+    <form className="ac" onSubmit={onFormSubmit}>
       <style>{CSS}</style>
 
       <header className="ac-head">
-        <button className="ac-back" onClick={w.back} aria-label="Back">
+        <button type="button" className="ac-back" onClick={w.back} aria-label="Back">
           <ChevronDown size={22} style={{ transform: 'rotate(90deg)' }} />
         </button>
         <h1 className="ac-title">Add contact</h1>
       </header>
 
       <div className="ac-body scroll">
+        <p className="ac-label">ENS name</p>
         <div className="ac-card">
           <div className="ac-field">
             <input
+              id="contact-name"
               value={raw}
               onChange={(event) => setRaw(event.target.value)}
-              placeholder="name, ENS name or label"
+              placeholder={`${brand.copy.exampleLabel} or vitalik.eth`}
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              aria-label="Contact name"
-              autoFocus
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
+              aria-label="ENS name"
             />
-            {!query.includes('.') && <span className="ac-suffix">.{w.parent}</span>}
           </div>
         </div>
 
         <p className="ac-hint" data-state={status.kind}>
-          {status.kind === 'empty' && `Resolves live on ${spec.network} — nothing is stored until it answers.`}
+          {status.kind === 'empty' &&
+            `Any ENS name. A label without a dot is tried as label.${w.parent} on ${spec.network}.`}
           {status.kind === 'resolving' && `Resolving ${status.query} on ${spec.network}…`}
           {status.kind === 'none' && status.message}
         </p>
@@ -428,11 +442,11 @@ export function AddContact() {
       </div>
 
       <div className="ac-foot">
-        <button className="btn btn--primary" onClick={save} disabled={!canSave}>
+        <button className="btn btn--primary" type="submit" disabled={!canSave}>
           Add contact
         </button>
       </div>
-    </div>
+    </form>
   )
 }
 
@@ -637,7 +651,7 @@ const CSS = `
   text-overflow: ellipsis;
 }
 
-.ab-chevron { flex: none; color: var(--text-3); transition: transform .2s ease; }
+.ab-chevron { flex: none; color: var(--text-3); transition: transform .2s cubic-bezier(0.32, 0.72, 0, 1); }
 
 .ab-detail {
   padding: 4px 16px 12px 68px;
@@ -739,6 +753,15 @@ const CSS = `
   overflow: hidden;
 }
 
+.ac-label {
+  margin: 2px 6px 8px;
+  font-size: var(--fs-sub);
+  font-weight: var(--fw-semibold);
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .ac-field {
   display: flex;
   align-items: center;
@@ -753,8 +776,6 @@ const CSS = `
   font-weight: var(--fw-semibold);
 }
 .ac-field input::placeholder { color: var(--text-3); font-weight: var(--fw-regular); }
-
-.ac-suffix { flex: none; font-size: 17px; font-weight: var(--fw-semibold); color: var(--text-3); }
 
 .ac-hint {
   min-height: 20px;

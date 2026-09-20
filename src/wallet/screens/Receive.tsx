@@ -5,7 +5,7 @@
  *
  * Today Tangem prints "Ethereum address" over a full 42-character hex string.
  * Here the name comes first and the address sits under it, one tap away: the
- * thing you hand somebody is `harpreet.tange.eth`, and the hex is the detail
+ * thing you hand somebody is `happy.ninza.eth`, and the hex is the detail
  * you can still check. Everything else about the sheet is unchanged — the same
  * white body, the same Show QR code / Copy / Share controls, the same
  * wrong-network warning bar with its blue info glyph.
@@ -194,7 +194,7 @@ export function Receive({ networkId }: ReceiveProps) {
         {canAddNetwork && (
           <button className="rc__add" onClick={() => openSheet({ kind: 'addNetwork' })}>
             <Plus size={16} />
-            Add network
+            Add chain
           </button>
         )}
 

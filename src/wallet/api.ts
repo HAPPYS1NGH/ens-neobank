@@ -12,9 +12,10 @@
  *   GET   /api/resolve?name=&chain=           resolve anything Send accepts
  */
 import type { ChainKey } from '@/lib/chains'
+import { brand, registry } from '@config'
 
 export interface WalletNameDTO {
-  /** Real, fully-qualified name as written, e.g. `harpreet.tange.eth`. */
+  /** Real, fully-qualified name as written, e.g. `happy.ninza.eth`. */
   fullName: string
   label: string
   parentName: string
@@ -28,28 +29,28 @@ export interface WalletNameDTO {
 }
 
 /**
- * The parent is `tange.eth`, not `tangem.eth`. That is the name the repo owner
- * actually controls, it is what the server writes to, and it is what every
- * screen must show. Do not "correct" it.
+ * What the UI prints after the label. Prefer the env var so a deploy can
+ * point at a staging parent without a rebuild of the preset; fall back to
+ * the production parent in app.config.ts.
  */
-export const DISPLAY_PARENT = process.env.NEXT_PUBLIC_DISPLAY_PARENT || 'tange.eth'
+export const DISPLAY_PARENT =
+  process.env.NEXT_PUBLIC_DISPLAY_PARENT || registry.productionParent
 
 export function displayName(name: Pick<WalletNameDTO, 'fullName'>): string {
   return name.fullName
 }
 
 /**
- * These two must match `src/server/proof.ts` byte for byte — the server
- * rebuilds the string and verifies the signature against it. The prefix is
- * a shared constant, not a label: change it here and there together, or
- * every write fails verification.
+ * These two must match `src/server/proof.ts` byte for byte — both read
+ * `brand.copy.proofPrefix` from app.config.ts. Change the preset, not these
+ * strings, or every write fails verification.
  */
 export function claimMessage(label: string, address: string): string {
-  return `Tangem demo\nClaim name: ${label}\nAccount: ${address.toLowerCase()}`
+  return `${brand.copy.proofPrefix}\nClaim name: ${label}\nAccount: ${address.toLowerCase()}`
 }
 
 export function addAddressMessage(fullName: string, chain: string, address: string): string {
-  return `Tangem demo\nAdd address to: ${fullName}\nChain: ${chain}\nAddress: ${address}`
+  return `${brand.copy.proofPrefix}\nAdd address to: ${fullName}\nChain: ${chain}\nAddress: ${address}`
 }
 
 interface Envelope<T> {
@@ -194,7 +195,7 @@ export interface ResolutionDTO {
 
 /**
  * Resolves whatever the Send field or the Address book holds, for one chain.
- * A bare label or a name under `tange.eth` is answered from our own registry;
+ * A bare label or a name under our parent is answered from our own registry;
  * anything else (`vitalik.eth`) goes through public ENS. See
  * `src/server/resolve.ts`.
  */

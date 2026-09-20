@@ -26,8 +26,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../api'
 import { CHAIN_BY_KEY, useWallet, type ChainKey, type WalletNameDTO } from '../store'
 import { chainsForNetworks } from '@/lib/chains'
-import { fullNameFor, normalizeLabelPreview } from '@/lib/format'
+import { fullNameFor, labelPreviewIssue, normalizeLabelPreview } from '@/lib/format'
 import { ChevronRight, Refresh, Trash } from '../components/Icons'
+import { brand } from '@config'
 
 export interface WalletDetailProps {
   /** Which wallet from `w.wallets` this screen is showing. */
@@ -115,6 +116,11 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
       const id = ++seq.current
       if (!value) {
         setCheck({ status: 'idle' })
+        return
+      }
+      const issue = labelPreviewIssue(value)
+      if (issue) {
+        setCheck({ status: 'invalid', message: issue })
         return
       }
       setCheck({ status: 'checking' })
@@ -210,7 +216,7 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
       <div className="wd-body scroll">
         {/* ------------------------------------------------------- identity */}
         <div className="wd-hero">
-          <div className="wd-hero-name">{fullName ?? wallet?.label ?? 'Wallet'}</div>
+          <div className="wd-hero-name">{fullName ?? wallet?.label ?? brand.copy.unnamedLabel}</div>
           <div className="wd-hero-sub">
             {wallet?.kind === 'hardware' ? 'Hardware Wallet' : 'Mobile Wallet'} &middot; $0.00
           </div>
@@ -303,7 +309,7 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
                 <input
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="yourname"
+                  placeholder={brand.copy.exampleLabel}
                   autoCapitalize="none"
                   autoCorrect="off"
                   spellCheck={false}

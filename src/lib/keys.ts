@@ -23,9 +23,10 @@ import { sha256 } from '@noble/hashes/sha256'
 import { ripemd160 } from '@noble/hashes/ripemd160'
 import { keccak_256 } from '@noble/hashes/sha3'
 import { bech32, base58 } from '@scure/base'
+import { brand } from '@config'
 import type { ChainKey } from './chains'
 
-const SEED_KEY = 'tangem.demo.seed.v1'
+const SEED_KEY = `${brand.storagePrefix}.seed.v1`
 
 function toHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')

@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Add network — reached from the Receive sheet's "Add network" affordance.
+ * Add chain — reached from Home (Add funds), Add & Manage, and Receive.
  *
  * Receive shows one network's address, and until now the only way to put a new
- * chain on the name was Manage tokens, a coin-shaped list with no exit back to
+ * chain on the name was Organize tokens, a coin-shaped list with no exit back to
  * the address you were trying to receive at. This sheet is the same write with
  * a receive-shaped front door: every writable network that is not on yet, one
  * toggle each, and on Save the merged selection goes to `saveNetworks` — which
@@ -118,7 +118,7 @@ export function AddNetworkSheet() {
 
   return (
     <Sheet
-      title="Add network"
+      title="Add chain"
       onClose={w.closeSheet}
       footer={
         draft.size > 0 || phase !== 'idle' ? (
@@ -185,7 +185,7 @@ export function AddNetworkSheet() {
         })}
         {available.length === 0 && !rows && (
           <p className="an-empty">
-            Every network this wallet can add is already on — Manage tokens has the full list.
+            Every chain this wallet can add is already on — Organize tokens has the full list.
           </p>
         )}
       </div>

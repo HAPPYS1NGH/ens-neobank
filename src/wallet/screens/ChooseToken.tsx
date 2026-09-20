@@ -163,8 +163,16 @@ export function ChooseToken({ purpose, onClose }: ChooseTokenProps) {
           ))}
         </div>
       ) : (
-        <div className="card">
-          <p className="ct-empty">Nothing here yet — add tokens from Manage tokens.</p>
+        <div className="card ct-empty-card">
+          <p className="ct-empty__title">No chains yet</p>
+          <p className="ct-empty">Add a chain to receive at your name.</p>
+          <button
+            type="button"
+            className="btn btn--primary ct-empty__cta"
+            onClick={() => w.openSheet({ kind: 'addNetwork' })}
+          >
+            Add chain
+          </button>
         </div>
       )}
 
@@ -276,13 +284,35 @@ const CSS = `
 }
 
 .ct-empty {
-  padding: 22px 16px;
+  padding: 0 16px;
   font-size: var(--fs-sub);
   color: var(--text-3);
   text-align: center;
 }
 
-.ct-empty--loose { background: none; }
+.ct-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 24px;
+}
+
+.ct-empty__title {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  color: var(--text-1);
+}
+
+.ct-empty-card .ct-empty { padding: 6px 0 0; }
+
+.ct-empty__cta {
+  margin-top: 18px;
+  width: auto;
+  min-width: 160px;
+  padding: 0 22px;
+}
+
+.ct-empty--loose { background: none; padding: 22px 16px; }
 
 /* The pinned field floats over the sheet bottom like IMG_4297's, so the
  * footer chrome behind it stays the sheet's own grey. */

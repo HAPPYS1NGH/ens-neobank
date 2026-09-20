@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next'
+import { brand } from '@config'
+import { brandColorCss } from '@/config/tokens'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: "Tangem × ENS",
-  description:
-    "A Tangem wallet UI demo where naming your wallet issues a real ENS subname.",
+  title: brand.copy.title,
+  description: brand.copy.description,
 }
 
 export const viewport: Viewport = {
@@ -12,13 +13,16 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
-  themeColor: '#FFFFFF',
+  themeColor: brand.colors.themeColor,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" data-theme={brand.theme}>
+      <body>
+        <style dangerouslySetInnerHTML={{ __html: brandColorCss(brand.colors) }} />
+        {children}
+      </body>
     </html>
   )
 }

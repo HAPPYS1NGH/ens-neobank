@@ -10,7 +10,7 @@
  * real spendable key and must never be funded.
  *
  * The names, however, are real. `src/wallet/api.ts` writes them to the ENS
- * registry under `tange.eth` for actual money to arrive at. That asymmetry is
+ * registry under `ninza.eth` for actual money to arrive at. That asymmetry is
  * the whole point of the demo, so keep the fake half fenced off here.
  * =====================================================================
  */
@@ -26,9 +26,8 @@ export interface AssetMeta {
   /** Foreground colour for the mark, picked for contrast against `color`. */
   ink: string
   /**
-   * A single glyph standing in for the coin's logo. No image assets ship with
-   * this build, so the mark is drawn as text inside a circle — which is also
-   * how Tangem renders a token it has no icon for.
+   * Fallback glyph if a vendored mark in `public/marks/` is missing.
+   * CoinMark prefers the official SVG; this is the letter-disc backup.
    */
   mark: string
   /** SIMULATED spot price in USD. */

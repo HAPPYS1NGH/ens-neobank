@@ -1,5 +1,6 @@
 import 'server-only'
 import { verifyMessage } from 'viem'
+import { brand } from '@config'
 import { httpError } from './http'
 import { isEvmAddress } from './validation'
 
@@ -15,11 +16,11 @@ import { isEvmAddress } from './validation'
  * signature captured for one claim cannot be replayed to write another.
  */
 export function claimMessage(label: string, address: string): string {
-  return `Tangem demo\nClaim name: ${label}\nAccount: ${address.toLowerCase()}`
+  return `${brand.copy.proofPrefix}\nClaim name: ${label}\nAccount: ${address.toLowerCase()}`
 }
 
 export function addAddressMessage(fullName: string, chain: string, address: string): string {
-  return `Tangem demo\nAdd address to: ${fullName}\nChain: ${chain}\nAddress: ${address}`
+  return `${brand.copy.proofPrefix}\nAdd address to: ${fullName}\nChain: ${chain}\nAddress: ${address}`
 }
 
 export async function requireSigner(
