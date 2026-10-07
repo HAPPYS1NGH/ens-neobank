@@ -8,11 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Neobank branch: start here
+# Neobank kit: start here
 
-This branch is the kit pre-shaped for neobanks: "open an account, pick a
-username, get paid by name". A new bank needs exactly three inputs from the
-user:
+This repo is the kit for neobanks: "open an account, pick a username, get
+paid by name". A new bank needs exactly three inputs from the user:
 
 1. **ENS parent** the bank owns, e.g. `bank.eth`
 2. **Namespace API key** for that parent
@@ -54,7 +53,7 @@ guess a parent or reuse another bank's key.
 That's the quick path, and it stops there. Restyling chrome to the bank's app
 (step 9 of the reskin checklist below) only happens when the user asks for it.
 
-Files that matter on this branch:
+Files that matter in this repo:
 
 | File | Role |
 |---|---|
@@ -64,7 +63,7 @@ Files that matter on this branch:
 | `scripts/scan-brand.mjs`, `scripts/brand-palette.mjs` | Site scan and colour picks. |
 | `docs/NEOBANK.md` | Human-facing version of this section. |
 
-On this branch, read "copy `neutral`" and "point `app.config.ts` at the
+In this repo, read "copy `neutral`" and "point `app.config.ts` at the
 preset" below as "edit `src/config/client.ts`". `app.config.ts` just
 re-exports it.
 
@@ -119,7 +118,7 @@ To see colour swap with no other work: set `brand: brandPresets.example` in
 
 ## Composability rules
 
-- `app.config.ts` (on this branch, `src/config/client.ts` behind it) is the
+- `app.config.ts` (`src/config/client.ts` behind it) is the
   only place a brand name, parent allowlist, demo tag, proof prefix, or
   colour belongs. Screens read `brand` / `registry`.
 - Colour is injected from `brand.colors` by `src/app/layout.tsx` via

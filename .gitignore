@@ -10,3 +10,6 @@ tsconfig.tsbuildinfo
 
 # Website scans from neobank:setup (third-party screenshots, regenerable)
 brand-scan/
+
+# Local Vercel link. The project is created per deploy, not committed.
+.vercel/

@@ -1,61 +1,40 @@
-# ENS mobile wallet kit
+# ENS neobank kit
 
 A Next.js phone demo that issues **gasless offchain ENS subnames** under a
-parent name you own. Naming the wallet mints the name. Adding a chain writes
-that chain's address onto it. Send resolves names. Reset starts the walkthrough
-over without burning the name.
+parent name you own. Open an account, pick a username, get paid by name.
+Naming the wallet mints the name. Adding a chain writes that chain's address
+onto it. Send resolves names.
 
-This is the internal base for spinning up **mobile** partner demos — the phone
-analog of `namespace-offchain-subname-client-demo`. Clone it, point
-`app.config.ts` at the client's parent and palette, restyle the chrome to their
-app, keep the plot. It is not a public template: expect to edit it per
-engagement rather than configure around it.
+An agent builds a bank's demo from three inputs:
 
-The geometry was distilled from the Tangem iOS demo (best UX we have). This
-checkout ships as **Ninza** — names mint under `ninza.eth`, chrome reads
-`brandPresets.ninza`. `brandPresets.neutral` stays the unbranded starting
-point for the next fork.
+1. ENS parent the bank owns, for example `bank.eth`
+2. Namespace API key for that parent
+3. The bank's website, for example `https://bank.example`
+
+```bash
+npm install
+npx playwright install chromium
+NAMESPACE_API_KEY='<key>' npm run neobank:setup -- --ens bank.eth --site https://bank.example
+npm run dev
+```
+
+Setup scans the website, saves the logo, derives colours, and writes
+`src/config/client.ts` plus `.env.local`. It mints nothing. The first real
+write is the first username someone claims in the app.
+
+If any of the three inputs is missing, ask for it. Pass the key through the
+environment, as above. Agents then follow [`AGENTS.md`](AGENTS.md): check the
+scan, match the screenshots, and rewrite the onboarding copy in the bank's
+voice. [`docs/NEOBANK.md`](docs/NEOBANK.md) is the same path in long form.
+
+Until setup runs, this checkout is the unbranded neobank under `ninza.eth`.
 
 > Names are live on Ethereum mainnet. Everything else (balances, prices,
 > transfers) is simulated. The seed in `localStorage` is a real spendable key
 > stored in plain text. **Never fund it.**
 
-## Neobank branch
-
-This branch (`neobank`) is set up for neobank demos. Give it the bank's ENS
-parent, a Namespace API key and the bank's website, and it pulls the name,
-logo and colours from the site:
-
-```bash
-npm install
-npm run neobank:setup -- --ens bank.eth --site https://bank.example --key <namespace key>
-npm run dev
-```
-
-The bank's config ends up in `src/config/client.ts`. See
-[`docs/NEOBANK.md`](docs/NEOBANK.md) for what setup does and what to check
-afterwards. Agents follow the top of [`AGENTS.md`](AGENTS.md).
-
-## Quick start
-
-```bash
-npm install
-cp .env.example .env.local   # add your Namespace API key
-npm run dev                  # http://localhost:3010
-```
-
-Then in `app.config.ts`:
-
-```ts
-registry: {
-  allowedParents: ['ninza.eth'],
-  productionParent: 'ninza.eth',
-},
-brand: brandPresets.ninza,
-```
-
 The server refuses to start if `NAMESPACE_PARENT_NAME` is not in
-`allowedParents`. Set `.env.local` to match.
+`allowedParents`. Setup writes `.env.local` to match `src/config/client.ts`.
 
 To confirm colour is driven by the preset, switch to `brandPresets.example`
 (green accent), look at Home, switch back.
@@ -77,16 +56,17 @@ out-of-scope chrome that toasts instead of vanishing.
 
 ## Changing brand, theme, colour
 
-One file for identity and colour: **`src/config/brands.ts`**, selected from
-**`app.config.ts`**.
+One file for this bank's identity and colour: **`src/config/client.ts`**.
+`app.config.ts` re-exports it. Leave the `neobank` preset in
+`src/config/brands.ts` alone so the next bank still has a base.
 
 | What | Where |
 |---|---|
-| Product name, CTAs, onboarding, reset copy, proof prefix | `brand.copy` |
-| Accent, ink, wash, price-up/down | `brand.colors` — injected as CSS variables by the layout |
-| Logo | `brand.logo.src` or letter mark from `shortName` |
-| Parent allowlist | `registry` in `app.config.ts` |
-| Demo metadata tag / localStorage prefix | `brand.demoTag`, `brand.storagePrefix` |
+| Product name, CTAs, onboarding, reset copy, proof prefix | `clientBrand.copy` |
+| Accent, ink, wash, price-up/down | `clientBrand.colors` — injected as CSS variables by the layout |
+| Logo | `clientBrand.logo.src` or letter mark from `shortName` |
+| Parent allowlist | `clientRegistry` in `src/config/client.ts` |
+| Demo metadata tag / localStorage prefix | `clientBrand.demoTag`, `clientBrand.storagePrefix` |
 
 Do not put a product name or a hex colour in a screen. Agents: see `AGENTS.md`.
 
