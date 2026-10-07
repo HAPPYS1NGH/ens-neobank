@@ -11,10 +11,10 @@
  *
  * Three things earn their complexity here:
  *
- *  1. **The label is shown, not applied silently.** Labels are ASCII
- *     (src/server/validation.ts) so "Harpreet S" becomes "harpreet-s". The
- *     field keeps what was typed and the line beneath it states what will
- *     actually be claimed — the user sees the change before committing to it.
+ *  1. **The field only holds a claimable label.** Letters, numbers, and
+ *     hyphens. Spaces and everything else are dropped as they are typed, so
+ *     the scroll shows the name that will be claimed. A trailing hyphen can
+ *     stay for one more keystroke; it cannot be submitted.
  *  2. **Availability is checked live, debounced.** `api.checkAvailability`
  *     already un-inverts the registry's 404-means-free behaviour (verified
  *     against src/app/api/subnames/availability/route.ts), so `available`
@@ -33,7 +33,8 @@ import { Back, Check, Close, Warning } from '../components/Icons'
 import { ApiError } from '../api'
 import { brand } from '@config'
 import { useWallet } from '../store'
-import { labelPreviewIssue, normalizeLabelPreview } from '@/lib/format'
+import { acceptLabel, labelPreviewIssue, normalizeLabelPreview } from '@/lib/format'
+import { NAME_PUPPET_CSS, NamePuppet, type PuppetMood } from './NamePuppet'
 
 /* --------------------------------------------------------------- status */
 
@@ -71,7 +72,9 @@ export interface NameWalletProps {
 export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps) {
   const w = useWallet()
 
-  const [raw, setRaw] = useState('')
+  const [raw, setRawState] = useState('')
+  const setRaw = (value: string) => setRawState(acceptLabel(value))
+  const [claiming, setClaiming] = useState(false)
   const [status, setStatus] = useState<Status>({ kind: 'empty' })
   const [skip, setSkip] = useState(false)
   const [claimError, setClaimError] = useState<string | null>(null)
@@ -146,15 +149,17 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
       w.skipName()
       return
     }
-    if (!canClaim || w.busy) return
+    if (!canClaim || w.busy || claiming) return
 
     setClaimError(null)
+    setClaiming(true)
     const result = await w.claimName(label, walletId)
     if (result.ok) {
       w.go({ name: 'nameClaimed' })
       return
     }
 
+    setClaiming(false)
     setClaimError(result.error)
     // The name may have gone between the check and the submit, so re-ask
     // rather than leaving a stale green tick sitting over a red error.
@@ -169,9 +174,23 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
           setStatus({ kind: 'unknown', message: 'Could not re-check this name' })
         }
       })
-  }, [canClaim, label, skip, w, walletId])
+  }, [canClaim, claiming, label, skip, w, walletId])
 
-  const disabled = skip ? false : !canClaim || w.busy
+  const disabled = skip ? false : !canClaim || w.busy || claiming
+
+  const mood: PuppetMood = skip
+    ? 'skipped'
+    : claiming
+      ? 'claiming'
+      : status.kind === 'available'
+        ? 'available'
+        : status.kind === 'taken'
+          ? 'taken'
+          : status.kind === 'checking'
+            ? 'checking'
+            : status.kind === 'rejected' && label.endsWith('-')
+              ? 'rejected'
+              : 'empty'
 
   /* --------------------------------- view --------------------------------- */
 
@@ -192,55 +211,37 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
 
   return (
     <form className="tgn" onSubmit={onFormSubmit}>
-      <style>{NAME_WALLET_CSS}</style>
+      <style>{NAME_WALLET_CSS + NAME_PUPPET_CSS}</style>
 
       <button type="button" className="circle-btn tgn__back" onClick={w.back} aria-label="Back">
         <Back size={22} />
       </button>
 
-      <div className="tgn__body scroll">
+      <header className="tgn__head">
         <h1 className="title tgn__title">{title}</h1>
         <p className="tgn__lede">{lede}</p>
+      </header>
 
-        <label className="card tgn__field" data-state={status.kind} data-skip={skip}>
-          <span className="tgn__sr">Wallet name</span>
-          <span className="tgn__entry">
-            <span className="tgn__sizer" aria-hidden="true">
-              {raw || brand.copy.exampleLabel}
-            </span>
-            <input
-              id="wallet-name"
-              className="tgn__input"
-              value={raw}
-              onChange={(event) => setRaw(event.target.value)}
-              placeholder={brand.copy.exampleLabel}
-              disabled={skip}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              maxLength={32}
-              size={1}
-              data-1p-ignore
-              data-lpignore="true"
-            />
-          </span>
-          <span className="tgn__parent" aria-hidden="true">
-            .{w.parent}
-          </span>
-        </label>
+      <div className="tgn__hero">
+        <NamePuppet
+          value={raw}
+          onValue={setRaw}
+          parent={w.parent}
+          placeholder={brand.copy.exampleLabel}
+          mood={mood}
+          disabled={skip || claiming}
+        />
+      </div>
 
+      <div className="tgn__foot">
         <StatusLine status={status} fullName={fullName} parent={w.parent} />
 
         {adjusted && (
           <p className="tgn__note">
-            Claimed as <strong>{label}</strong> — names use lowercase letters, numbers and
-            hyphens.
+            Claimed as <strong>{label}</strong> — a name cannot end with a hyphen.
           </p>
         )}
-      </div>
 
-      <div className="tgn__foot">
         {claimError && (
           <div className="tgn__error" role="alert">
             <Warning size={18} />
@@ -263,8 +264,8 @@ export function NameWallet({ purpose = 'onboarding', walletId }: NameWalletProps
           </span>
         </label>
 
-        <button className="btn btn--primary" type="submit" disabled={disabled}>
-          {w.busy ? brand.copy.claimingCta : skip ? brand.copy.continueCta : brand.copy.claimCta}
+        <button className="btn btn--primary" type="submit" disabled={disabled} aria-busy={claiming || undefined}>
+          {claiming ? brand.copy.claimingCta : skip ? brand.copy.continueCta : brand.copy.claimCta}
         </button>
       </div>
     </form>
@@ -289,7 +290,7 @@ function StatusLine({
 }) {
   if (status.kind === 'empty') {
     return (
-      <p className="tgn__status tgn__status--idle">
+      <p id="wallet-name-status" className="tgn__status tgn__status--idle">
         Your name will read {brand.copy.exampleLabel}.{parent}
       </p>
     )
@@ -297,7 +298,7 @@ function StatusLine({
 
   if (status.kind === 'rejected') {
     return (
-      <p className="tgn__status tgn__status--bad">
+      <p id="wallet-name-status" className="tgn__status tgn__status--bad">
         <Close size={15} />
         <span>{status.message}</span>
       </p>
@@ -308,7 +309,7 @@ function StatusLine({
     status.kind === 'available' ? 'good' : status.kind === 'taken' ? 'bad' : 'idle'
 
   return (
-    <p className={`tgn__status tgn__status--${tone}`}>
+    <p id="wallet-name-status" className={`tgn__status tgn__status--${tone}`}>
       {status.kind === 'checking' && <span className="tgn__spinner" aria-hidden="true" />}
       {status.kind === 'available' && <Check size={15} />}
       {status.kind === 'taken' && <Close size={15} />}
@@ -331,8 +332,10 @@ const NAME_WALLET_CSS = `
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-page);
+  background: var(--accent);
+  color: #fff;
   padding: 60px 0 34px;
+  overflow: hidden;
 }
 
 .tgn__back {
@@ -344,91 +347,28 @@ const NAME_WALLET_CSS = `
   z-index: 5;
 }
 
-.tgn__body {
-  flex: 1;
-  min-height: 0;
-  padding: 118px var(--pad-onboard) 0;
+.tgn__head {
+  position: relative;
+  z-index: 2;
+  padding: 62px 64px 0;
+  text-align: center;
 }
 
-.tgn__title { text-align: center; color: var(--text-1); }
+.tgn__title { margin: 0; text-align: center; color: #fff; }
 
 .tgn__lede {
-  margin: 10px auto 0;
-  max-width: 320px;
+  margin: 8px auto 0;
+  max-width: 300px;
   text-align: center;
-  font-size: var(--fs-sub);
-  color: var(--text-2);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.78);
   line-height: var(--lh-body);
 }
 
-/* Same object as Send's recipient field and Address book's contact field:
-   a white card, 56px tall, 16px type. The parent sits inside the card as a
-   suffix overlay so the hit area is the whole row, not just the typed label. */
-.tgn__field {
+.tgn__hero {
   position: relative;
-  display: flex;
-  align-items: center;
-  margin-top: 32px;
-  min-height: 56px;
-  padding: 0 var(--pad-row);
-  cursor: text;
-  transition: box-shadow .18s ease, opacity .18s ease;
-}
-
-.tgn__field[data-state="available"] { box-shadow: inset 0 0 0 1.5px var(--accent); }
-.tgn__field[data-state="taken"],
-.tgn__field[data-state="rejected"] { box-shadow: inset 0 0 0 1.5px var(--price-down); }
-.tgn__field[data-skip="true"] { opacity: .4; pointer-events: none; }
-
-.tgn__sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.tgn__input {
-  width: 100%;
-  min-width: 0;
-  font-size: 16px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
-  color: var(--text-1);
-  field-sizing: content;
-}
-
-.tgn__input::placeholder {
-  color: var(--text-3);
-  font-weight: var(--fw-regular);
-}
-
-.tgn__entry {
-  display: inline-grid;
-  max-width: 220px;
-}
-.tgn__entry > * { grid-area: 1 / 1; }
-
-.tgn__sizer {
-  visibility: hidden;
-  white-space: pre;
-  pointer-events: none;
-  font-size: 16px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
-}
-
-.tgn__parent {
-  flex: none;
-  font-size: 16px;
-  font-weight: var(--fw-semibold);
-  letter-spacing: -0.01em;
-  color: var(--text-3);
-  pointer-events: none;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Status ------------------------------------------------------------------ */
@@ -445,48 +385,55 @@ const NAME_WALLET_CSS = `
   text-align: center;
 }
 
-.tgn__status--idle { color: var(--text-3); }
-.tgn__status--good { color: var(--accent); }
-.tgn__status--bad { color: var(--price-down); }
+.tgn__status--idle { color: rgba(255, 255, 255, 0.78); }
+.tgn__status--good { color: #fff; }
+.tgn__status--bad { color: #fff; }
 
 .tgn__status-name {
   font-weight: var(--fw-semibold);
-  color: var(--text-1);
+  color: #fff;
   word-break: break-all;
 }
 
-.tgn__status--idle .tgn__status-name { color: var(--text-2); }
+.tgn__status--bad .tgn__status-name,
+.tgn__status--bad { color: #fff; }
 
 .tgn__spinner {
   width: 13px;
   height: 13px;
   flex: none;
   border-radius: 999px;
-  border: 1.6px solid var(--track-off);
-  border-top-color: var(--text-2);
+  border: 1.6px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
   animation: tgn-spin .7s linear infinite;
 }
 
 @keyframes tgn-spin { to { transform: rotate(360deg) } }
 
+@media (prefers-reduced-motion: reduce) {
+  .tgn__spinner { animation: none; }
+}
+
 .tgn__note {
-  margin-top: 10px;
+  margin-top: 6px;
   text-align: center;
   font-size: var(--fs-sub);
-  color: var(--text-2);
+  color: rgba(255, 255, 255, 0.78);
   line-height: var(--lh-body);
 }
 
-.tgn__note strong { font-weight: var(--fw-semibold); color: var(--text-1); }
+.tgn__note strong { font-weight: var(--fw-semibold); color: #fff; }
 
 /* Foot -------------------------------------------------------------------- */
 
 .tgn__foot {
+  position: relative;
+  z-index: 2;
   flex: none;
   padding: 0 var(--pad-onboard);
   display: flex;
   flex-direction: column;
-  gap: var(--gap-row);
+  gap: 10px;
 }
 
 .tgn__error {
@@ -528,23 +475,28 @@ const NAME_WALLET_CSS = `
   margin-top: 1px;
   border-radius: 7px;
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--track-off);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
   color: transparent;
   display: grid;
   place-items: center;
-  transition: background .15s ease, box-shadow .15s ease;
+  transition: background 150ms ease-out, box-shadow 150ms ease-out;
 }
 
 .tgn__skip input:checked + .tgn__box {
-  background: var(--text-1);
-  box-shadow: inset 0 0 0 1.5px var(--text-1);
-  color: var(--text-on-dark);
+  background: #fff;
+  box-shadow: none;
+  color: var(--accent);
+}
+
+.tgn__skip input:focus-visible + .tgn__box {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 .tgn__skip-text {
   font-size: var(--fs-label);
   font-weight: var(--fw-semibold);
-  color: var(--text-1);
+  color: #fff;
   line-height: 1.3;
 }
 
@@ -553,7 +505,7 @@ const NAME_WALLET_CSS = `
   margin-top: 2px;
   font-size: var(--fs-sub);
   font-weight: var(--fw-regular);
-  color: var(--text-3);
+  color: rgba(255, 255, 255, 0.72);
 }
 `
 

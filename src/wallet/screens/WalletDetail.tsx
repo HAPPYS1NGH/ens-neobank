@@ -26,7 +26,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from '../api'
 import { CHAIN_BY_KEY, useWallet, type ChainKey, type WalletNameDTO } from '../store'
 import { chainsForNetworks } from '@/lib/chains'
-import { fullNameFor, labelPreviewIssue, normalizeLabelPreview } from '@/lib/format'
+import { LABEL_MAX, acceptLabel, fullNameFor, labelPreviewIssue, normalizeLabelPreview } from '@/lib/format'
 import { ChevronRight, Refresh, Trash } from '../components/Icons'
 import { brand } from '@config'
 
@@ -308,7 +308,11 @@ export function WalletDetail({ walletId }: WalletDetailProps) {
               <div className="wd-field">
                 <input
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => setDraft(acceptLabel(event.target.value))}
+                  onKeyDown={(event) => {
+                    if (event.key === ' ') event.preventDefault()
+                  }}
+                  maxLength={LABEL_MAX}
                   placeholder={brand.copy.exampleLabel}
                   autoCapitalize="none"
                   autoCorrect="off"

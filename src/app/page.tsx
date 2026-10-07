@@ -252,7 +252,7 @@ function App() {
   }, [w])
 
   return (
-    <Shell>
+    <Shell statusTint={w.screen.name === 'nameWallet' ? '#ffffff' : undefined}>
       {w.ready ? (
         <>
           <ScreenRouter />

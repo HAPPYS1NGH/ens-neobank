@@ -149,6 +149,22 @@ export function fullNameFor(label: string, parent: string): string {
 export const LABEL_MIN = 3
 export const LABEL_MAX = 20
 
+/**
+ * What the name field is willing to hold. Letters fold to lowercase. Spaces
+ * and every other character are dropped, not rewritten into something else.
+ * A leading hyphen is dropped. A trailing hyphen stays so the next letter
+ * can follow it. The server normalizes again; this only stops the field
+ * from showing a character that cannot be claimed.
+ */
+export function acceptLabel(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+/, '')
+    .slice(0, LABEL_MAX)
+}
+
 /** Why this preview label would be rejected. `null` means it is well-formed. */
 export function labelPreviewIssue(label: string): string | null {
   if (!label) return null
