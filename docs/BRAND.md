@@ -15,3 +15,8 @@ When you fork this into a client's demo:
 3. Do not invent a "powered by" lockup that asserts a partnership.
 
 Colour does not live in this folder. Colour lives in `brand.colors`.
+
+On the `neobank` branch, `npm run neobank:setup` downloads the bank's favicon
+or app icon into `public/brand/<slug>.<ext>`. That file is the bank's
+trademark. Write down which URL it came from (the setup output says which kind
+of icon it picked) before you share the demo.

@@ -8,6 +8,66 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+# Neobank branch: start here
+
+This branch is the kit pre-shaped for neobanks: "open an account, pick a
+username, get paid by name". A new bank needs exactly three inputs from the
+user:
+
+1. **ENS parent** the bank owns, e.g. `bank.eth`
+2. **Namespace API key** for that parent
+3. **Product website**, e.g. `https://bank.example`
+
+If any of the three is missing, ask for it before doing anything else. Don't
+guess a parent or reuse another bank's key.
+
+### When you have all three
+
+1. Run setup. It validates the name, checks the key (read-only), scans the
+   site, saves the logo, derives colours, writes `src/config/client.ts`,
+   `.env.local` and the cleanup `DEMO_TAG`:
+
+   ```bash
+   NAMESPACE_API_KEY='<key>' npm run neobank:setup -- --ens <parent> --site <url>
+   ```
+
+   Pass the key through the environment as shown, never in a file you commit,
+   and never echo it back to the user. If `src/config/client.ts` was already
+   generated for a different bank, ask before re-running with `--force`.
+   If Chromium is missing, run `npx playwright install chromium` and retry.
+2. Read setup's **Check** list and fix each item in `src/config/client.ts`.
+3. Look at `brand-scan/<slug>/mobile.png` and `desktop.png` (Read tool). If
+   setup reported a bot wall or blank page, use a browser tool to view the
+   live site instead. Correct `colors` where the screenshot disagrees with
+   the pick. Keep `accent` at 3:1 or better on white.
+4. Rewrite onboarding copy in the bank's voice from `scan.json` →
+   `headings`/`description`. Override fields in `clientBrand.copy`. Keep the
+   neobank vocabulary (account, username, get paid) and the simulated-money
+   honesty from `plot.md`.
+5. Record the logo source in `docs/BRAND.md`.
+6. Run `npm run dev`, open the onboarding and name step, and compare with the
+   site screenshot.
+7. Verify: `npm run typecheck && npm run build && npm run check:secrets`.
+8. Commit `src/config/client.ts`, `public/brand/<slug>.*`, the cleanup script
+   and `docs/BRAND.md`. Never commit `.env.local` or `brand-scan/`.
+
+That's the quick path, and it stops there. Restyling chrome to the bank's app
+(step 9 of the reskin checklist below) only happens when the user asks for it.
+
+Files that matter on this branch:
+
+| File | Role |
+|---|---|
+| `src/config/client.ts` | The bank: parent allowlist + brand. Generated, then hand-edited. |
+| `src/config/brands.ts` → `neobank` | Base copy for every neobank. Don't edit it for one bank. |
+| `scripts/neobank-setup.mjs` | The three-input setup. |
+| `scripts/scan-brand.mjs`, `scripts/brand-palette.mjs` | Site scan and colour picks. |
+| `docs/NEOBANK.md` | Human-facing version of this section. |
+
+On this branch, read "copy `neutral`" and "point `app.config.ts` at the
+preset" below as "edit `src/config/client.ts`". `app.config.ts` just
+re-exports it.
+
 # ENS mobile wallet kit
 
 Read `plot.md` before changing a screen. Read this file before adding a string
@@ -59,8 +119,9 @@ To see colour swap with no other work: set `brand: brandPresets.example` in
 
 ## Composability rules
 
-- `app.config.ts` is the only place a brand name, parent allowlist, demo tag,
-  proof prefix, or colour belongs. Screens read `brand` / `registry`.
+- `app.config.ts` (on this branch, `src/config/client.ts` behind it) is the
+  only place a brand name, parent allowlist, demo tag, proof prefix, or
+  colour belongs. Screens read `brand` / `registry`.
 - Colour is injected from `brand.colors` by `src/app/layout.tsx` via
   `src/config/tokens.ts`. Geometry, type, and radius stay in
   `src/app/globals.css` and are shared on purpose.

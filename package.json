@@ -9,6 +9,8 @@
     "start": "next start -p 3010",
     "typecheck": "tsc --noEmit",
     "cleanup": "node scripts/cleanup-demo-names.mjs",
+    "neobank:setup": "node scripts/neobank-setup.mjs",
+    "scan:brand": "node scripts/scan-brand.mjs",
     "check:secrets": "node scripts/check-client-boundary.mjs",
     "shots": "node shots/capture.mjs"
   },

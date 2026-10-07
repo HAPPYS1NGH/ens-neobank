@@ -10,7 +10,7 @@
  *   node scripts/cleanup-demo-names.mjs --apply demo123 # delete just that one
  *   node scripts/cleanup-demo-names.mjs --apply --all   # delete every tagged name
  */
-const DEMO_TAG = 'ninza-kit' // must match brand.demoTag in src/config/brands.ts
+const DEMO_TAG = 'neobank-kit' // must match brand.demoTag in src/config/client.ts (neobank:setup sets both)
 
 const env = Object.fromEntries(
   readFileSync('.env.local', 'utf8').split('\n').filter(Boolean).map((line) => {

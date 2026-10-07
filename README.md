@@ -20,6 +20,22 @@ point for the next fork.
 > transfers) is simulated. The seed in `localStorage` is a real spendable key
 > stored in plain text. **Never fund it.**
 
+## Neobank branch
+
+This branch (`neobank`) is set up for neobank demos. Give it the bank's ENS
+parent, a Namespace API key and the bank's website, and it pulls the name,
+logo and colours from the site:
+
+```bash
+npm install
+npm run neobank:setup -- --ens bank.eth --site https://bank.example --key <namespace key>
+npm run dev
+```
+
+The bank's config ends up in `src/config/client.ts`. See
+[`docs/NEOBANK.md`](docs/NEOBANK.md) for what setup does and what to check
+afterwards. Agents follow the top of [`AGENTS.md`](AGENTS.md).
+
 ## Quick start
 
 ```bash
